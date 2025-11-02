@@ -12,6 +12,7 @@ const OpenAI = require('openai');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const EMBED_MODEL = process.env.OPENAI_EMBED_MODEL || 'text-embedding-3-small';
+const EMBEDDING_TIMEOUT_MS = Number(process.env.OPENAI_EMBED_TIMEOUT_MS || process.env.OPENAI_TIMEOUT_MS || 5000);
 
 const knowledgeDir = path.resolve(process.cwd(), 'knowledge');
 let memory = [];
@@ -106,12 +107,20 @@ async function initKnowledgeBase() {
 
 async function getRelevantContext(query, topK = 4) {
   if (!query || memory.length === 0) return '';
-  const { data } = await openai.embeddings.create({ model: EMBED_MODEL, input: query });
-  const q = data[0].embedding;
-  const scored = memory.map((m) => ({ m, score: cosineSim(q, m.embedding) }));
-  scored.sort((a, b) => b.score - a.score);
-  const top = scored.slice(0, topK).map((s) => s.m.text);
-  return top.join('\n---\n');
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), EMBEDDING_TIMEOUT_MS);
+    const { data } = await openai.embeddings.create({ model: EMBED_MODEL, input: query }, { signal: ac.signal });
+    clearTimeout(t);
+    const q = data[0].embedding;
+    const scored = memory.map((m) => ({ m, score: cosineSim(q, m.embedding) }));
+    scored.sort((a, b) => b.score - a.score);
+    const top = scored.slice(0, topK).map((s) => s.m.text);
+    return top.join('\n---\n');
+  } catch (e) {
+    if (process.env.DEBUG_AI) console.warn('[knowledge] embedding timeout/error', e && e.message ? e.message : e);
+    return '';
+  }
 }
 
 module.exports = { initKnowledgeBase, getRelevantContext };
