@@ -2,7 +2,12 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
 
-const pdfParse = require('pdf-parse');
+let pdfParse = null;
+try {
+  pdfParse = require('pdf-parse');
+} catch (e) {
+  console.warn('[knowledge] pdf-parse unavailable; PDF ingestion disabled:', e && e.message ? e.message : e);
+}
 const OpenAI = require('openai');
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -47,6 +52,7 @@ function cosineSim(a, b) {
 }
 
 async function readPdf(filePath) {
+  if (!pdfParse) return '';
   const buf = fs.readFileSync(filePath);
   const { text } = await pdfParse(buf);
   return text || '';
@@ -70,8 +76,15 @@ async function initKnowledgeBase() {
       let text = '';
       const ext = path.extname(file).toLowerCase();
       try {
-        if (ext === '.pdf') text = await readPdf(file);
-        else text = readText(file);
+        if (ext === '.pdf') {
+          if (!pdfParse) {
+            console.warn('[knowledge] skipping PDF (no pdf-parse):', file);
+            continue;
+          }
+          text = await readPdf(file);
+        } else {
+          text = readText(file);
+        }
       } catch (e) {
         console.error('[knowledge] read error', file, e && e.message ? e.message : e);
         continue;

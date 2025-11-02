@@ -15,6 +15,7 @@ const apiKey = process.env.OPENAI_API_KEY || '';
 const client = apiKey.trim() ? new OpenAI({ apiKey }) : null;
 const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const greetingTemperature = Number(process.env.GREETING_TEMPERATURE || 0.8);
+const REQUEST_TIMEOUT_MS = Number(process.env.OPENAI_TIMEOUT_MS || 8000);
 const { receptionistPrompt, receptionistExamples } = require('../prompts/receptionist');
 const { calendarPrompt } = require('../prompts/calendar');
 const { servicesPrompt } = require('../prompts/services');
@@ -60,16 +61,27 @@ async function inferIntentFromText(text, opts) {
   if (process.env.DEBUG_AI) {
     console.log('[openai] using model:', model);
   }
-  if (!client) throw new Error('OPENAI_API_KEY not configured');
-  const resp = await client.chat.completions.create({
-    model,
-    temperature: 0.2,
-    response_format: { type: 'json_object' },
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-  });
+  if (!client) {
+    return { intent: 'general', reply: 'Thanks for calling. How can I help you?', datetimeISO: now };
+  }
+  let resp;
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);
+    resp = await client.chat.completions.create({
+      model,
+      temperature: 0.2,
+      response_format: { type: 'json_object' },
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }, { signal: ac.signal });
+    clearTimeout(t);
+  } catch (e) {
+    if (process.env.DEBUG_AI) console.warn('[openai] inferIntent timeout/error', e && e.message ? e.message : e);
+    return { intent: 'general', reply: 'Thanks for calling. How can I help you?', datetimeISO: now };
+  }
   const content = resp.choices?.[0]?.message?.content || '{}';
   if (process.env.DEBUG_AI) {
     console.log('[openai] raw content:', content);
@@ -155,15 +167,23 @@ async function generateGreeting(opts) {
     'Generate ONLY a single, short first-line greeting. Do not ask follow-ups.',
   ].join('\n');
   const user = `One friendly greeting sentence for ${businessName}.`;
-  if (!client) throw new Error('OPENAI_API_KEY not configured');
-  const resp = await client.chat.completions.create({
-    model,
-    temperature: greetingTemperature,
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-  });
+  if (!client) return `Hello, you've reached ${businessName}.`;
+  let resp;
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);
+    resp = await client.chat.completions.create({
+      model,
+      temperature: greetingTemperature,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }, { signal: ac.signal });
+    clearTimeout(t);
+  } catch (_) {
+    return `Hello, you've reached ${businessName}.`;
+  }
   const content = resp.choices?.[0]?.message?.content?.trim();
   return content || `Hello, you've reached ${businessName}.`;
 }
@@ -179,16 +199,23 @@ async function generateCallSummaryFromMessages(messages, opts) {
   ].join('\n');
   const lines = (messages || []).map(m => `${m.role}: ${m.text}`).join('\n');
   const user = `Summarize this call:\n${lines}`;
-  if (!client) throw new Error('OPENAI_API_KEY not configured');
-  const resp = await client.chat.completions.create({
-    model,
-    temperature: 0.2,
-    messages: [
-      { role: 'system', content: system },
-      { role: 'user', content: user },
-    ],
-  });
-  return resp.choices?.[0]?.message?.content?.trim() || '';
+  if (!client) return '';
+  try {
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), REQUEST_TIMEOUT_MS);
+    const resp = await client.chat.completions.create({
+      model,
+      temperature: 0.2,
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: user },
+      ],
+    }, { signal: ac.signal });
+    clearTimeout(t);
+    return resp.choices?.[0]?.message?.content?.trim() || '';
+  } catch (_) {
+    return '';
+  }
 }
 
 module.exports.generateCallSummaryFromMessages = generateCallSummaryFromMessages;
