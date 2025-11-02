@@ -17,8 +17,13 @@ require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
 const requiredEnv = ['TWILIO_ACCOUNT_SID', 'TWILIO_AUTH_TOKEN'];
 const missing = requiredEnv.filter((k) => !process.env[k] || String(process.env[k]).trim() === '');
 if (missing.length) {
-  console.error('Missing required env vars in .env.local:', missing.join(', '));
-  process.exit(1);
+  const msg = 'Missing required env vars: ' + missing.join(', ');
+  if (process.env.VERCEL) {
+    console.warn(msg + ' (continuing in serverless runtime)');
+  } else {
+    console.error(msg);
+    process.exit(1);
+  }
 }
 
 const app = express();

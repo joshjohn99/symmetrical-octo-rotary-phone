@@ -11,12 +11,8 @@ try {
   throw new Error('openai package not installed');
 }
 
-const apiKey = process.env.OPENAI_API_KEY;
-if (!apiKey || !apiKey.trim()) {
-  throw new Error('Missing OPENAI_API_KEY in .env.local');
-}
-
-const client = new OpenAI({ apiKey });
+const apiKey = process.env.OPENAI_API_KEY || '';
+const client = apiKey.trim() ? new OpenAI({ apiKey }) : null;
 const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const greetingTemperature = Number(process.env.GREETING_TEMPERATURE || 0.8);
 const { receptionistPrompt, receptionistExamples } = require('../prompts/receptionist');
@@ -64,6 +60,7 @@ async function inferIntentFromText(text, opts) {
   if (process.env.DEBUG_AI) {
     console.log('[openai] using model:', model);
   }
+  if (!client) throw new Error('OPENAI_API_KEY not configured');
   const resp = await client.chat.completions.create({
     model,
     temperature: 0.2,
@@ -158,6 +155,7 @@ async function generateGreeting(opts) {
     'Generate ONLY a single, short first-line greeting. Do not ask follow-ups.',
   ].join('\n');
   const user = `One friendly greeting sentence for ${businessName}.`;
+  if (!client) throw new Error('OPENAI_API_KEY not configured');
   const resp = await client.chat.completions.create({
     model,
     temperature: greetingTemperature,
@@ -181,6 +179,7 @@ async function generateCallSummaryFromMessages(messages, opts) {
   ].join('\n');
   const lines = (messages || []).map(m => `${m.role}: ${m.text}`).join('\n');
   const user = `Summarize this call:\n${lines}`;
+  if (!client) throw new Error('OPENAI_API_KEY not configured');
   const resp = await client.chat.completions.create({
     model,
     temperature: 0.2,
