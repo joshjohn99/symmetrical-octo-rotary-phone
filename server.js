@@ -37,10 +37,17 @@ const sessionByCallSid = new Map();
 // Ensure correct proto/host behind tunnels/proxies
 app.set('trust proxy', true);
 
-// Twilio posts x-www-form-urlencoded by default
-app.use(express.urlencoded({ extended: false }));
 // Enable JSON parsing globally (for debug/test endpoints)
 app.use(express.json());
+
+// Centralized error handler to avoid timeouts on malformed bodies
+app.use((err, _req, res, next) => {
+  if (err && (err.type === 'entity.parse.failed' || /request size did not match content length/i.test(String(err && err.message)))) {
+    console.warn('[body] parse error:', err && err.message ? err.message : err);
+    return res.status(400).send('Bad Request');
+  }
+  next(err);
+});
 
 app.get('/health', (_req, res) => {
   res.status(200).send('OK');
