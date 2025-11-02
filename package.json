@@ -1,0 +1,35 @@
+{
+  "name": "ai-receptionist",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "check:google": "node scripts/check-google-calendar.js",
+    "check:google:env": "node scripts/check-google-calendar.js --check-only",
+    "check:google:manual": "node scripts/check-google-calendar.js --manual",
+    "start": "node server.js",
+    "dev:vercel": "vercel dev"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@google-cloud/local-auth": "^3.0.1",
+    "@openai/agents": "^0.2.1",
+    "@supabase/supabase-js": "^2.78.0",
+    "chrono-node": "^2.9.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "googleapis": "^164.1.0",
+    "luxon": "^3.7.2",
+    "openai": "^6.7.0",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.16.3",
+    "postgres": "^3.4.7",
+    "serverless-http": "^4.0.0",
+    "twilio": "^5.10.4",
+    "ws": "^8.18.3",
+    "zod": "^3.25.76"
+  }
+}

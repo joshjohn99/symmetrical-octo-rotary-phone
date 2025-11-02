@@ -1,0 +1,305 @@
+0 verbose cli /Users/joshuajohnson/.nvm/versions/node/v22.15.0/bin/node /Users/joshuajohnson/.nvm/versions/node/v22.15.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.15.0
+3 silly config load:file:/Users/joshuajohnson/.nvm/versions/node/v22.15.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/.npmrc
+5 silly config load:file:/Users/joshuajohnson/.npmrc
+6 silly config load:file:/Users/joshuajohnson/.nvm/versions/node/v22.15.0/etc/npmrc
+7 verbose title npm i chrono-node luxon
+8 verbose argv "i" "chrono-node" "luxon"
+9 verbose logfile logs-max:10 dir:/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/.npm-cache/_logs/2025-11-02T08_17_29_690Z-
+10 verbose logfile /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/.npm-cache/_logs/2025-11-02T08_17_29_690Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly idealTree buildDeps
+14 silly fetch manifest chrono-node@*
+15 silly packumentCache full:https://registry.npmjs.org/chrono-node cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/chrono-node 250ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/chrono-node set size:undefined disposed:false
+18 silly fetch manifest luxon@*
+19 silly packumentCache full:https://registry.npmjs.org/luxon cache-miss
+20 http fetch GET 200 https://registry.npmjs.org/luxon 69ms (cache miss)
+21 silly packumentCache full:https://registry.npmjs.org/luxon set size:undefined disposed:false
+22 silly placeDep ROOT chrono-node@2.9.0 OK for: ai-receptionist@1.0.0 want: *
+23 silly placeDep ROOT luxon@3.7.2 OK for: ai-receptionist@1.0.0 want: *
+24 silly reify moves {}
+25 silly audit bulk request {
+25 silly audit   '@google-cloud/local-auth': [ '3.0.1' ],
+25 silly audit   '@isaacs/cliui': [ '8.0.2' ],
+25 silly audit   '@modelcontextprotocol/sdk': [ '1.20.2' ],
+25 silly audit   '@napi-rs/canvas': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-android-arm64': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-darwin-arm64': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-darwin-x64': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-linux-arm-gnueabihf': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-linux-arm64-gnu': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-linux-arm64-musl': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-linux-riscv64-gnu': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-linux-x64-gnu': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-linux-x64-musl': [ '0.1.80' ],
+25 silly audit   '@napi-rs/canvas-win32-x64-msvc': [ '0.1.80' ],
+25 silly audit   '@openai/agents': [ '0.2.1' ],
+25 silly audit   '@openai/agents-core': [ '0.2.1' ],
+25 silly audit   '@openai/agents-openai': [ '0.2.1' ],
+25 silly audit   '@openai/agents-realtime': [ '0.2.1' ],
+25 silly audit   '@pkgjs/parseargs': [ '0.11.0' ],
+25 silly audit   '@supabase/auth-js': [ '2.78.0' ],
+25 silly audit   '@supabase/functions-js': [ '2.78.0' ],
+25 silly audit   '@supabase/node-fetch': [ '2.6.15' ],
+25 silly audit   '@supabase/postgrest-js': [ '2.78.0' ],
+25 silly audit   '@supabase/realtime-js': [ '2.78.0' ],
+25 silly audit   '@supabase/storage-js': [ '2.78.0' ],
+25 silly audit   '@supabase/supabase-js': [ '2.78.0' ],
+25 silly audit   '@types/node': [ '24.9.2' ],
+25 silly audit   '@types/phoenix': [ '1.6.6' ],
+25 silly audit   '@types/ws': [ '8.18.1' ],
+25 silly audit   accepts: [ '2.0.0' ],
+25 silly audit   'agent-base': [ '7.1.4', '6.0.2' ],
+25 silly audit   ajv: [ '6.12.6' ],
+25 silly audit   'ansi-regex': [ '6.2.2', '5.0.1' ],
+25 silly audit   'ansi-styles': [ '6.2.3', '4.3.0' ],
+25 silly audit   arrify: [ '2.0.1' ],
+25 silly audit   asynckit: [ '0.4.0' ],
+25 silly audit   axios: [ '1.13.1' ],
+25 silly audit   'balanced-match': [ '1.0.2' ],
+25 silly audit   'base64-js': [ '1.5.1' ],
+25 silly audit   'bignumber.js': [ '9.3.1' ],
+25 silly audit   'body-parser': [ '2.2.0' ],
+25 silly audit   'brace-expansion': [ '2.0.2' ],
+25 silly audit   'buffer-equal-constant-time': [ '1.0.1' ],
+25 silly audit   bytes: [ '3.1.2' ],
+25 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+25 silly audit   'call-bound': [ '1.0.4' ],
+25 silly audit   'color-convert': [ '2.0.1' ],
+25 silly audit   'color-name': [ '1.1.4' ],
+25 silly audit   'combined-stream': [ '1.0.8' ],
+25 silly audit   'content-disposition': [ '1.0.0' ],
+25 silly audit   'content-type': [ '1.0.5' ],
+25 silly audit   cookie: [ '0.7.2' ],
+25 silly audit   'cookie-signature': [ '1.2.2' ],
+25 silly audit   cors: [ '2.8.5' ],
+25 silly audit   'cross-spawn': [ '7.0.6' ],
+25 silly audit   'data-uri-to-buffer': [ '4.0.1' ],
+25 silly audit   dayjs: [ '1.11.19' ],
+25 silly audit   debug: [ '4.4.3' ],
+25 silly audit   'delayed-stream': [ '1.0.0' ],
+25 silly audit   depd: [ '2.0.0' ],
+25 silly audit   dotenv: [ '17.2.3' ],
+25 silly audit   'dunder-proto': [ '1.0.1' ],
+25 silly audit   eastasianwidth: [ '0.2.0' ],
+25 silly audit   'ecdsa-sig-formatter': [ '1.0.11' ],
+25 silly audit   'ee-first': [ '1.1.1' ],
+25 silly audit   'emoji-regex': [ '9.2.2', '8.0.0' ],
+25 silly audit   encodeurl: [ '2.0.0' ],
+25 silly audit   'es-define-property': [ '1.0.1' ],
+25 silly audit   'es-errors': [ '1.3.0' ],
+25 silly audit   'es-object-atoms': [ '1.1.1' ],
+25 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+25 silly audit   'escape-html': [ '1.0.3' ],
+25 silly audit   etag: [ '1.8.1' ],
+25 silly audit   eventsource: [ '3.0.7' ],
+25 silly audit   'eventsource-parser': [ '3.0.6' ],
+25 silly audit   express: [ '5.1.0' ],
+25 silly audit   'express-rate-limit': [ '7.5.1' ],
+25 silly audit   extend: [ '3.0.2' ],
+25 silly audit   'fast-deep-equal': [ '3.1.3' ],
+25 silly audit   'fast-json-stable-stringify': [ '2.1.0' ],
+25 silly audit   'fetch-blob': [ '3.2.0' ],
+25 silly audit   finalhandler: [ '2.1.0' ],
+25 silly audit   'follow-redirects': [ '1.15.11' ],
+25 silly audit   'foreground-child': [ '3.3.1' ],
+25 silly audit   'form-data': [ '4.0.4' ],
+25 silly audit   'mime-db': [ '1.52.0', '1.54.0' ],
+25 silly audit   'mime-types': [ '2.1.35', '3.0.1' ],
+25 silly audit   'formdata-polyfill': [ '4.0.10' ],
+25 silly audit   forwarded: [ '0.2.0' ],
+25 silly audit   fresh: [ '2.0.0' ],
+25 silly audit   'function-bind': [ '1.1.2' ],
+25 silly audit   gaxios: [ '6.7.1', '7.1.3' ],
+25 silly audit   'gcp-metadata': [ '6.1.1', '8.1.2' ],
+25 silly audit   'get-intrinsic': [ '1.3.0' ],
+25 silly audit   'get-proto': [ '1.0.1' ],
+25 silly audit   glob: [ '10.4.5' ],
+25 silly audit   'google-auth-library': [ '9.15.1', '10.5.0' ],
+25 silly audit   'google-logging-utils': [ '0.0.2', '1.1.2' ],
+25 silly audit   googleapis: [ '164.1.0' ],
+25 silly audit   'googleapis-common': [ '8.0.0' ],
+25 silly audit   gtoken: [ '8.0.0', '7.1.0' ],
+25 silly audit   'node-fetch': [ '3.3.2', '2.7.0' ],
+25 silly audit   gopd: [ '1.2.0' ],
+25 silly audit   'has-symbols': [ '1.1.0' ],
+25 silly audit   'has-tostringtag': [ '1.0.2' ],
+25 silly audit   hasown: [ '2.0.2' ],
+25 silly audit   'http-errors': [ '2.0.0' ],
+25 silly audit   statuses: [ '2.0.1', '2.0.2' ],
+25 silly audit   'https-proxy-agent': [ '7.0.6', '5.0.1' ],
+25 silly audit   'iconv-lite': [ '0.6.3', '0.7.0' ],
+25 silly audit   inherits: [ '2.0.4' ],
+25 silly audit   'ipaddr.js': [ '1.9.1' ],
+25 silly audit   'is-docker': [ '2.2.1' ],
+25 silly audit   'is-fullwidth-code-point': [ '3.0.0' ],
+25 silly audit   'is-promise': [ '4.0.0' ],
+25 silly audit   'is-stream': [ '2.0.1' ],
+25 silly audit   'is-wsl': [ '2.2.0' ],
+25 silly audit   isexe: [ '2.0.0' ],
+25 silly audit   jackspeak: [ '3.4.3' ],
+25 silly audit   'json-bigint': [ '1.0.0' ],
+25 silly audit   'json-schema-traverse': [ '0.4.1' ],
+25 silly audit   jsonwebtoken: [ '9.0.2' ],
+25 silly audit   jwa: [ '1.4.2', '2.0.1' ],
+25 silly audit   jws: [ '3.2.2', '4.0.0' ],
+25 silly audit   'lodash.includes': [ '4.3.0' ],
+25 silly audit   'lodash.isboolean': [ '3.0.3' ],
+25 silly audit   'lodash.isinteger': [ '4.0.4' ],
+25 silly audit   'lodash.isnumber': [ '3.0.3' ],
+25 silly audit   'lodash.isplainobject': [ '4.0.6' ],
+25 silly audit   'lodash.isstring': [ '4.0.1' ],
+25 silly audit   'lodash.once': [ '4.1.1' ],
+25 silly audit   'lru-cache': [ '10.4.3' ],
+25 silly audit   'math-intrinsics': [ '1.1.0' ],
+25 silly audit   'media-typer': [ '1.1.0' ],
+25 silly audit   'merge-descriptors': [ '2.0.0' ],
+25 silly audit   minimatch: [ '9.0.5' ],
+25 silly audit   minipass: [ '7.1.2' ],
+25 silly audit   ms: [ '2.1.3' ],
+25 silly audit   negotiator: [ '1.0.0' ],
+25 silly audit   'node-domexception': [ '1.0.0' ],
+25 silly audit   'object-assign': [ '4.1.1' ],
+25 silly audit   'object-inspect': [ '1.13.4' ],
+25 silly audit   'on-finished': [ '2.4.1' ],
+25 silly audit   once: [ '1.4.0' ],
+25 silly audit   open: [ '7.4.2' ],
+25 silly audit   openai: [ '6.7.0' ],
+25 silly audit   'package-json-from-dist': [ '1.0.1' ],
+25 silly audit   parseurl: [ '1.3.3' ],
+25 silly audit   'path-key': [ '3.1.1' ],
+25 silly audit   'path-scurry': [ '1.11.1' ],
+25 silly audit   'path-to-regexp': [ '8.3.0' ],
+25 silly audit   'pdf-parse': [ '2.4.5' ],
+25 silly audit   'pdfjs-dist': [ '5.4.296' ],
+25 silly audit   pg: [ '8.16.3' ],
+25 silly audit   'pg-cloudflare': [ '1.2.7' ],
+25 silly audit   'pg-connection-string': [ '2.9.1' ],
+25 silly audit   'pg-int8': [ '1.0.1' ],
+25 silly audit   'pg-pool': [ '3.10.1' ],
+25 silly audit   'pg-protocol': [ '1.10.3' ],
+25 silly audit   'pg-types': [ '2.2.0' ],
+25 silly audit   pgpass: [ '1.0.5' ],
+25 silly audit   'pkce-challenge': [ '5.0.0' ],
+25 silly audit   postgres: [ '3.4.7' ],
+25 silly audit   'postgres-array': [ '2.0.0' ],
+25 silly audit   'postgres-bytea': [ '1.0.0' ],
+25 silly audit   'postgres-date': [ '1.0.7' ],
+25 silly audit   'postgres-interval': [ '1.2.0' ],
+25 silly audit   'proxy-addr': [ '2.0.7' ],
+25 silly audit   'proxy-from-env': [ '1.1.0' ],
+25 silly audit   punycode: [ '2.3.1' ],
+25 silly audit   qs: [ '6.14.0' ],
+25 silly audit   'range-parser': [ '1.2.1' ],
+25 silly audit   'raw-body': [ '3.0.1' ],
+25 silly audit   rimraf: [ '5.0.10' ],
+25 silly audit   router: [ '2.2.0' ],
+25 silly audit   'safe-buffer': [ '5.2.1' ],
+25 silly audit   'safer-buffer': [ '2.1.2' ],
+25 silly audit   scmp: [ '2.1.0' ],
+25 silly audit   semver: [ '7.7.3' ],
+25 silly audit   send: [ '1.2.0' ],
+25 silly audit   'serve-static': [ '2.2.0' ],
+25 silly audit   'server-destroy': [ '1.0.1' ],
+25 silly audit   setprototypeof: [ '1.2.0' ],
+25 silly audit   'shebang-command': [ '2.0.0' ],
+25 silly audit   'shebang-regex': [ '3.0.0' ],
+25 silly audit   'side-channel': [ '1.1.0' ],
+25 silly audit   'side-channel-list': [ '1.0.0' ],
+25 silly audit   'side-channel-map': [ '1.0.1' ],
+25 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+25 silly audit   'signal-exit': [ '4.1.0' ],
+25 silly audit   split2: [ '4.2.0' ],
+25 silly audit   'string-width': [ '5.1.2', '4.2.3' ],
+25 silly audit   'strip-ansi': [ '6.0.1', '7.1.2' ],
+25 silly audit   toidentifier: [ '1.0.1' ],
+25 silly audit   tr46: [ '0.0.3' ],
+25 silly audit   tslib: [ '2.8.1' ],
+25 silly audit   twilio: [ '5.10.4' ],
+25 silly audit   'type-is': [ '2.0.1' ],
+25 silly audit   'undici-types': [ '7.16.0' ],
+25 silly audit   unpipe: [ '1.0.0' ],
+25 silly audit   'uri-js': [ '4.4.1' ],
+25 silly audit   'url-template': [ '2.0.8' ],
+25 silly audit   uuid: [ '9.0.1' ],
+25 silly audit   vary: [ '1.1.2' ],
+25 silly audit   'web-streams-polyfill': [ '3.3.3' ],
+25 silly audit   'webidl-conversions': [ '3.0.1' ],
+25 silly audit   'whatwg-url': [ '5.0.0' ],
+25 silly audit   which: [ '2.0.2' ],
+25 silly audit   'wrap-ansi': [ '8.1.0', '7.0.0' ],
+25 silly audit   wrappy: [ '1.0.2' ],
+25 silly audit   ws: [ '8.18.3' ],
+25 silly audit   xmlbuilder: [ '13.0.2' ],
+25 silly audit   xtend: [ '4.0.2' ],
+25 silly audit   zod: [ '3.25.76' ],
+25 silly audit   'zod-to-json-schema': [ '3.24.6' ],
+25 silly audit   'chrono-node': [ '2.9.0' ],
+25 silly audit   luxon: [ '3.7.2' ]
+25 silly audit }
+26 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-win32-x64-msvc
+27 silly reify mark deleted [
+27 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-win32-x64-msvc'
+27 silly reify ]
+28 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-musl
+29 silly reify mark deleted [
+29 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-musl'
+29 silly reify ]
+30 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-gnu
+31 silly reify mark deleted [
+31 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-gnu'
+31 silly reify ]
+32 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-riscv64-gnu
+33 silly reify mark deleted [
+33 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-riscv64-gnu'
+33 silly reify ]
+34 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-musl
+35 silly reify mark deleted [
+35 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-musl'
+35 silly reify ]
+36 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-gnu
+37 silly reify mark deleted [
+37 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-gnu'
+37 silly reify ]
+38 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm-gnueabihf
+39 silly reify mark deleted [
+39 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm-gnueabihf'
+39 silly reify ]
+40 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-darwin-x64
+41 silly reify mark deleted [
+41 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-darwin-x64'
+41 silly reify ]
+42 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-android-arm64
+43 silly reify mark deleted [
+43 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-android-arm64'
+43 silly reify ]
+44 http cache luxon@https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz 0ms (cache hit)
+45 http cache chrono-node@https://registry.npmjs.org/chrono-node/-/chrono-node-2.9.0.tgz 0ms (cache hit)
+46 silly tarball no local data for luxon@https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz. Extracting by manifest.
+47 silly tarball no local data for chrono-node@https://registry.npmjs.org/chrono-node/-/chrono-node-2.9.0.tgz. Extracting by manifest.
+48 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 112ms
+49 silly audit report {}
+50 http fetch GET 200 https://registry.npmjs.org/chrono-node/-/chrono-node-2.9.0.tgz 287ms (cache miss)
+51 http fetch GET 200 https://registry.npmjs.org/luxon/-/luxon-3.7.2.tgz 333ms (cache miss)
+52 silly ADD node_modules/luxon
+53 silly ADD node_modules/chrono-node
+54 silly ADD
+55 silly ADD
+56 silly ADD
+57 silly ADD
+58 silly ADD
+59 silly ADD
+60 silly ADD
+61 silly ADD
+62 silly ADD
+63 verbose cwd /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist
+64 verbose os Darwin 24.3.0
+65 verbose node v22.15.0
+66 verbose npm  v10.9.2
+67 verbose exit 0
+68 info ok

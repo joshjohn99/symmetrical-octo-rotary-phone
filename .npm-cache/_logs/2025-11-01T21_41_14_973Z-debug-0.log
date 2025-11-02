@@ -1,0 +1,356 @@
+0 verbose cli /Users/joshuajohnson/.nvm/versions/node/v22.15.0/bin/node /Users/joshuajohnson/.nvm/versions/node/v22.15.0/bin/npm
+1 info using npm@10.9.2
+2 info using node@v22.15.0
+3 silly config load:file:/Users/joshuajohnson/.nvm/versions/node/v22.15.0/lib/node_modules/npm/npmrc
+4 silly config load:file:/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/.npmrc
+5 silly config load:file:/Users/joshuajohnson/.npmrc
+6 silly config load:file:/Users/joshuajohnson/.nvm/versions/node/v22.15.0/etc/npmrc
+7 verbose title npm i pdf-parse
+8 verbose argv "i" "pdf-parse"
+9 verbose logfile logs-max:10 dir:/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/.npm-cache/_logs/2025-11-01T21_41_14_973Z-
+10 verbose logfile /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/.npm-cache/_logs/2025-11-01T21_41_14_973Z-debug-0.log
+11 silly logfile done cleaning log files
+12 silly packumentCache heap:4345298944 maxSize:1086324736 maxEntrySize:543162368
+13 silly idealTree buildDeps
+14 silly fetch manifest pdf-parse@*
+15 silly packumentCache full:https://registry.npmjs.org/pdf-parse cache-miss
+16 http fetch GET 200 https://registry.npmjs.org/pdf-parse 175ms (cache miss)
+17 silly packumentCache full:https://registry.npmjs.org/pdf-parse set size:undefined disposed:false
+18 silly placeDep ROOT pdf-parse@2.4.5 OK for: ai-receptionist@1.0.0 want: *
+19 silly fetch manifest pdfjs-dist@5.4.296
+20 silly packumentCache full:https://registry.npmjs.org/pdfjs-dist cache-miss
+21 silly fetch manifest @napi-rs/canvas@0.1.80
+22 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas cache-miss
+23 http fetch GET 200 https://registry.npmjs.org/pdfjs-dist 133ms (cache miss)
+24 silly packumentCache full:https://registry.npmjs.org/pdfjs-dist set size:undefined disposed:false
+25 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas 205ms (cache miss)
+26 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas set size:undefined disposed:false
+27 silly placeDep ROOT @napi-rs/canvas@0.1.80 OK for: pdf-parse@2.4.5 want: 0.1.80
+28 silly placeDep ROOT pdfjs-dist@5.4.296 OK for: pdf-parse@2.4.5 want: 5.4.296
+29 silly fetch manifest @napi-rs/canvas-darwin-x64@0.1.80
+30 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-darwin-x64 cache-miss
+31 silly fetch manifest @napi-rs/canvas-darwin-arm64@0.1.80
+32 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-darwin-arm64 cache-miss
+33 silly fetch manifest @napi-rs/canvas-android-arm64@0.1.80
+34 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-android-arm64 cache-miss
+35 silly fetch manifest @napi-rs/canvas-linux-x64-gnu@0.1.80
+36 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-x64-gnu cache-miss
+37 silly fetch manifest @napi-rs/canvas-linux-x64-musl@0.1.80
+38 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-x64-musl cache-miss
+39 silly fetch manifest @napi-rs/canvas-win32-x64-msvc@0.1.80
+40 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-win32-x64-msvc cache-miss
+41 silly fetch manifest @napi-rs/canvas-linux-arm64-gnu@0.1.80
+42 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm64-gnu cache-miss
+43 silly fetch manifest @napi-rs/canvas-linux-arm64-musl@0.1.80
+44 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm64-musl cache-miss
+45 silly fetch manifest @napi-rs/canvas-linux-riscv64-gnu@0.1.80
+46 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-riscv64-gnu cache-miss
+47 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-darwin-arm64 91ms (cache miss)
+48 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-darwin-arm64 set size:undefined disposed:false
+49 silly fetch manifest @napi-rs/canvas-linux-arm-gnueabihf@0.1.80
+50 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm-gnueabihf cache-miss
+51 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-darwin-x64 100ms (cache miss)
+52 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-darwin-x64 set size:undefined disposed:false
+53 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm64-musl 155ms (cache miss)
+54 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm64-musl set size:undefined disposed:false
+55 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-linux-x64-gnu 181ms (cache miss)
+56 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-x64-gnu set size:undefined disposed:false
+57 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-linux-x64-musl 195ms (cache miss)
+58 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-x64-musl set size:undefined disposed:false
+59 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm64-gnu 199ms (cache miss)
+60 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm64-gnu set size:undefined disposed:false
+61 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-linux-riscv64-gnu 202ms (cache miss)
+62 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-riscv64-gnu set size:undefined disposed:false
+63 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm-gnueabihf 112ms (cache miss)
+64 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-linux-arm-gnueabihf set size:undefined disposed:false
+65 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-win32-x64-msvc 208ms (cache miss)
+66 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-win32-x64-msvc set size:undefined disposed:false
+67 http fetch GET 200 https://registry.npmjs.org/@napi-rs%2fcanvas-android-arm64 230ms (cache miss)
+68 silly packumentCache full:https://registry.npmjs.org/@napi-rs%2fcanvas-android-arm64 set size:undefined disposed:false
+69 silly placeDep ROOT @napi-rs/canvas-android-arm64@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+70 silly placeDep ROOT @napi-rs/canvas-darwin-arm64@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+71 silly placeDep ROOT @napi-rs/canvas-darwin-x64@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+72 silly placeDep ROOT @napi-rs/canvas-linux-arm-gnueabihf@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+73 silly placeDep ROOT @napi-rs/canvas-linux-arm64-gnu@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+74 silly placeDep ROOT @napi-rs/canvas-linux-arm64-musl@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+75 silly placeDep ROOT @napi-rs/canvas-linux-riscv64-gnu@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+76 silly placeDep ROOT @napi-rs/canvas-linux-x64-gnu@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+77 silly placeDep ROOT @napi-rs/canvas-linux-x64-musl@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+78 silly placeDep ROOT @napi-rs/canvas-win32-x64-msvc@0.1.80 OK for: @napi-rs/canvas@0.1.80 want: 0.1.80
+79 silly reify moves {}
+80 silly audit bulk request {
+80 silly audit   '@google-cloud/local-auth': [ '3.0.1' ],
+80 silly audit   '@isaacs/cliui': [ '8.0.2' ],
+80 silly audit   '@modelcontextprotocol/sdk': [ '1.20.2' ],
+80 silly audit   '@openai/agents': [ '0.2.1' ],
+80 silly audit   '@openai/agents-core': [ '0.2.1' ],
+80 silly audit   '@openai/agents-openai': [ '0.2.1' ],
+80 silly audit   '@openai/agents-realtime': [ '0.2.1' ],
+80 silly audit   '@pkgjs/parseargs': [ '0.11.0' ],
+80 silly audit   '@types/node': [ '24.9.2' ],
+80 silly audit   '@types/ws': [ '8.18.1' ],
+80 silly audit   accepts: [ '2.0.0' ],
+80 silly audit   'agent-base': [ '7.1.4', '6.0.2' ],
+80 silly audit   ajv: [ '6.12.6' ],
+80 silly audit   'ansi-regex': [ '6.2.2', '5.0.1' ],
+80 silly audit   'ansi-styles': [ '6.2.3', '4.3.0' ],
+80 silly audit   arrify: [ '2.0.1' ],
+80 silly audit   asynckit: [ '0.4.0' ],
+80 silly audit   axios: [ '1.13.1' ],
+80 silly audit   'balanced-match': [ '1.0.2' ],
+80 silly audit   'base64-js': [ '1.5.1' ],
+80 silly audit   'bignumber.js': [ '9.3.1' ],
+80 silly audit   'body-parser': [ '2.2.0' ],
+80 silly audit   'brace-expansion': [ '2.0.2' ],
+80 silly audit   'buffer-equal-constant-time': [ '1.0.1' ],
+80 silly audit   bytes: [ '3.1.2' ],
+80 silly audit   'call-bind-apply-helpers': [ '1.0.2' ],
+80 silly audit   'call-bound': [ '1.0.4' ],
+80 silly audit   'color-convert': [ '2.0.1' ],
+80 silly audit   'color-name': [ '1.1.4' ],
+80 silly audit   'combined-stream': [ '1.0.8' ],
+80 silly audit   'content-disposition': [ '1.0.0' ],
+80 silly audit   'content-type': [ '1.0.5' ],
+80 silly audit   cookie: [ '0.7.2' ],
+80 silly audit   'cookie-signature': [ '1.2.2' ],
+80 silly audit   cors: [ '2.8.5' ],
+80 silly audit   'cross-spawn': [ '7.0.6' ],
+80 silly audit   'data-uri-to-buffer': [ '4.0.1' ],
+80 silly audit   dayjs: [ '1.11.19' ],
+80 silly audit   debug: [ '4.4.3' ],
+80 silly audit   'delayed-stream': [ '1.0.0' ],
+80 silly audit   depd: [ '2.0.0' ],
+80 silly audit   dotenv: [ '17.2.3' ],
+80 silly audit   'dunder-proto': [ '1.0.1' ],
+80 silly audit   eastasianwidth: [ '0.2.0' ],
+80 silly audit   'ecdsa-sig-formatter': [ '1.0.11' ],
+80 silly audit   'ee-first': [ '1.1.1' ],
+80 silly audit   'emoji-regex': [ '9.2.2', '8.0.0' ],
+80 silly audit   encodeurl: [ '2.0.0' ],
+80 silly audit   'es-define-property': [ '1.0.1' ],
+80 silly audit   'es-errors': [ '1.3.0' ],
+80 silly audit   'es-object-atoms': [ '1.1.1' ],
+80 silly audit   'es-set-tostringtag': [ '2.1.0' ],
+80 silly audit   'escape-html': [ '1.0.3' ],
+80 silly audit   etag: [ '1.8.1' ],
+80 silly audit   eventsource: [ '3.0.7' ],
+80 silly audit   'eventsource-parser': [ '3.0.6' ],
+80 silly audit   express: [ '5.1.0' ],
+80 silly audit   'express-rate-limit': [ '7.5.1' ],
+80 silly audit   extend: [ '3.0.2' ],
+80 silly audit   'fast-deep-equal': [ '3.1.3' ],
+80 silly audit   'fast-json-stable-stringify': [ '2.1.0' ],
+80 silly audit   'fetch-blob': [ '3.2.0' ],
+80 silly audit   finalhandler: [ '2.1.0' ],
+80 silly audit   'follow-redirects': [ '1.15.11' ],
+80 silly audit   'foreground-child': [ '3.3.1' ],
+80 silly audit   'form-data': [ '4.0.4' ],
+80 silly audit   'mime-db': [ '1.52.0', '1.54.0' ],
+80 silly audit   'mime-types': [ '2.1.35', '3.0.1' ],
+80 silly audit   'formdata-polyfill': [ '4.0.10' ],
+80 silly audit   forwarded: [ '0.2.0' ],
+80 silly audit   fresh: [ '2.0.0' ],
+80 silly audit   'function-bind': [ '1.1.2' ],
+80 silly audit   gaxios: [ '6.7.1', '7.1.3' ],
+80 silly audit   'gcp-metadata': [ '6.1.1', '8.1.2' ],
+80 silly audit   'get-intrinsic': [ '1.3.0' ],
+80 silly audit   'get-proto': [ '1.0.1' ],
+80 silly audit   glob: [ '10.4.5' ],
+80 silly audit   'google-auth-library': [ '9.15.1', '10.5.0' ],
+80 silly audit   'google-logging-utils': [ '0.0.2', '1.1.2' ],
+80 silly audit   googleapis: [ '164.1.0' ],
+80 silly audit   'googleapis-common': [ '8.0.0' ],
+80 silly audit   gtoken: [ '8.0.0', '7.1.0' ],
+80 silly audit   'node-fetch': [ '3.3.2', '2.7.0' ],
+80 silly audit   gopd: [ '1.2.0' ],
+80 silly audit   'has-symbols': [ '1.1.0' ],
+80 silly audit   'has-tostringtag': [ '1.0.2' ],
+80 silly audit   hasown: [ '2.0.2' ],
+80 silly audit   'http-errors': [ '2.0.0' ],
+80 silly audit   statuses: [ '2.0.1', '2.0.2' ],
+80 silly audit   'https-proxy-agent': [ '7.0.6', '5.0.1' ],
+80 silly audit   'iconv-lite': [ '0.6.3', '0.7.0' ],
+80 silly audit   inherits: [ '2.0.4' ],
+80 silly audit   'ipaddr.js': [ '1.9.1' ],
+80 silly audit   'is-docker': [ '2.2.1' ],
+80 silly audit   'is-fullwidth-code-point': [ '3.0.0' ],
+80 silly audit   'is-promise': [ '4.0.0' ],
+80 silly audit   'is-stream': [ '2.0.1' ],
+80 silly audit   'is-wsl': [ '2.2.0' ],
+80 silly audit   isexe: [ '2.0.0' ],
+80 silly audit   jackspeak: [ '3.4.3' ],
+80 silly audit   'json-bigint': [ '1.0.0' ],
+80 silly audit   'json-schema-traverse': [ '0.4.1' ],
+80 silly audit   jsonwebtoken: [ '9.0.2' ],
+80 silly audit   jwa: [ '1.4.2', '2.0.1' ],
+80 silly audit   jws: [ '3.2.2', '4.0.0' ],
+80 silly audit   'lodash.includes': [ '4.3.0' ],
+80 silly audit   'lodash.isboolean': [ '3.0.3' ],
+80 silly audit   'lodash.isinteger': [ '4.0.4' ],
+80 silly audit   'lodash.isnumber': [ '3.0.3' ],
+80 silly audit   'lodash.isplainobject': [ '4.0.6' ],
+80 silly audit   'lodash.isstring': [ '4.0.1' ],
+80 silly audit   'lodash.once': [ '4.1.1' ],
+80 silly audit   'lru-cache': [ '10.4.3' ],
+80 silly audit   'math-intrinsics': [ '1.1.0' ],
+80 silly audit   'media-typer': [ '1.1.0' ],
+80 silly audit   'merge-descriptors': [ '2.0.0' ],
+80 silly audit   minimatch: [ '9.0.5' ],
+80 silly audit   minipass: [ '7.1.2' ],
+80 silly audit   ms: [ '2.1.3' ],
+80 silly audit   negotiator: [ '1.0.0' ],
+80 silly audit   'node-domexception': [ '1.0.0' ],
+80 silly audit   'object-assign': [ '4.1.1' ],
+80 silly audit   'object-inspect': [ '1.13.4' ],
+80 silly audit   'on-finished': [ '2.4.1' ],
+80 silly audit   once: [ '1.4.0' ],
+80 silly audit   open: [ '7.4.2' ],
+80 silly audit   openai: [ '6.7.0' ],
+80 silly audit   'package-json-from-dist': [ '1.0.1' ],
+80 silly audit   parseurl: [ '1.3.3' ],
+80 silly audit   'path-key': [ '3.1.1' ],
+80 silly audit   'path-scurry': [ '1.11.1' ],
+80 silly audit   'path-to-regexp': [ '8.3.0' ],
+80 silly audit   pg: [ '8.16.3' ],
+80 silly audit   'pg-cloudflare': [ '1.2.7' ],
+80 silly audit   'pg-connection-string': [ '2.9.1' ],
+80 silly audit   'pg-int8': [ '1.0.1' ],
+80 silly audit   'pg-pool': [ '3.10.1' ],
+80 silly audit   'pg-protocol': [ '1.10.3' ],
+80 silly audit   'pg-types': [ '2.2.0' ],
+80 silly audit   pgpass: [ '1.0.5' ],
+80 silly audit   'pkce-challenge': [ '5.0.0' ],
+80 silly audit   'postgres-array': [ '2.0.0' ],
+80 silly audit   'postgres-bytea': [ '1.0.0' ],
+80 silly audit   'postgres-date': [ '1.0.7' ],
+80 silly audit   'postgres-interval': [ '1.2.0' ],
+80 silly audit   'proxy-addr': [ '2.0.7' ],
+80 silly audit   'proxy-from-env': [ '1.1.0' ],
+80 silly audit   punycode: [ '2.3.1' ],
+80 silly audit   qs: [ '6.14.0' ],
+80 silly audit   'range-parser': [ '1.2.1' ],
+80 silly audit   'raw-body': [ '3.0.1' ],
+80 silly audit   rimraf: [ '5.0.10' ],
+80 silly audit   router: [ '2.2.0' ],
+80 silly audit   'safe-buffer': [ '5.2.1' ],
+80 silly audit   'safer-buffer': [ '2.1.2' ],
+80 silly audit   scmp: [ '2.1.0' ],
+80 silly audit   semver: [ '7.7.3' ],
+80 silly audit   send: [ '1.2.0' ],
+80 silly audit   'serve-static': [ '2.2.0' ],
+80 silly audit   'server-destroy': [ '1.0.1' ],
+80 silly audit   setprototypeof: [ '1.2.0' ],
+80 silly audit   'shebang-command': [ '2.0.0' ],
+80 silly audit   'shebang-regex': [ '3.0.0' ],
+80 silly audit   'side-channel': [ '1.1.0' ],
+80 silly audit   'side-channel-list': [ '1.0.0' ],
+80 silly audit   'side-channel-map': [ '1.0.1' ],
+80 silly audit   'side-channel-weakmap': [ '1.0.2' ],
+80 silly audit   'signal-exit': [ '4.1.0' ],
+80 silly audit   split2: [ '4.2.0' ],
+80 silly audit   'string-width': [ '5.1.2', '4.2.3' ],
+80 silly audit   'strip-ansi': [ '6.0.1', '7.1.2' ],
+80 silly audit   toidentifier: [ '1.0.1' ],
+80 silly audit   tr46: [ '0.0.3' ],
+80 silly audit   twilio: [ '5.10.4' ],
+80 silly audit   'type-is': [ '2.0.1' ],
+80 silly audit   'undici-types': [ '7.16.0' ],
+80 silly audit   unpipe: [ '1.0.0' ],
+80 silly audit   'uri-js': [ '4.4.1' ],
+80 silly audit   'url-template': [ '2.0.8' ],
+80 silly audit   uuid: [ '9.0.1' ],
+80 silly audit   vary: [ '1.1.2' ],
+80 silly audit   'web-streams-polyfill': [ '3.3.3' ],
+80 silly audit   'webidl-conversions': [ '3.0.1' ],
+80 silly audit   'whatwg-url': [ '5.0.0' ],
+80 silly audit   which: [ '2.0.2' ],
+80 silly audit   'wrap-ansi': [ '8.1.0', '7.0.0' ],
+80 silly audit   wrappy: [ '1.0.2' ],
+80 silly audit   ws: [ '8.18.3' ],
+80 silly audit   xmlbuilder: [ '13.0.2' ],
+80 silly audit   xtend: [ '4.0.2' ],
+80 silly audit   zod: [ '3.25.76' ],
+80 silly audit   'zod-to-json-schema': [ '3.24.6' ],
+80 silly audit   'pdf-parse': [ '2.4.5' ],
+80 silly audit   '@napi-rs/canvas': [ '0.1.80' ],
+80 silly audit   'pdfjs-dist': [ '5.4.296' ],
+80 silly audit   '@napi-rs/canvas-android-arm64': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-darwin-arm64': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-darwin-x64': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-linux-arm-gnueabihf': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-linux-arm64-gnu': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-linux-arm64-musl': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-linux-riscv64-gnu': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-linux-x64-gnu': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-linux-x64-musl': [ '0.1.80' ],
+80 silly audit   '@napi-rs/canvas-win32-x64-msvc': [ '0.1.80' ]
+80 silly audit }
+81 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-win32-x64-msvc
+82 silly reify mark deleted [
+82 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-win32-x64-msvc'
+82 silly reify ]
+83 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-musl
+84 silly reify mark deleted [
+84 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-musl'
+84 silly reify ]
+85 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-gnu
+86 silly reify mark deleted [
+86 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-x64-gnu'
+86 silly reify ]
+87 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-riscv64-gnu
+88 silly reify mark deleted [
+88 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-riscv64-gnu'
+88 silly reify ]
+89 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-musl
+90 silly reify mark deleted [
+90 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-musl'
+90 silly reify ]
+91 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-gnu
+92 silly reify mark deleted [
+92 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm64-gnu'
+92 silly reify ]
+93 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm-gnueabihf
+94 silly reify mark deleted [
+94 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-linux-arm-gnueabihf'
+94 silly reify ]
+95 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-darwin-x64
+96 silly reify mark deleted [
+96 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-darwin-x64'
+96 silly reify ]
+97 verbose reify failed optional dependency /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-android-arm64
+98 silly reify mark deleted [
+98 silly reify   '/Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist/node_modules/@napi-rs/canvas-android-arm64'
+98 silly reify ]
+99 http cache pdfjs-dist@https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-5.4.296.tgz 0ms (cache hit)
+100 http cache @napi-rs/canvas-darwin-arm64@https://registry.npmjs.org/@napi-rs/canvas-darwin-arm64/-/canvas-darwin-arm64-0.1.80.tgz 0ms (cache hit)
+101 http cache pdf-parse@https://registry.npmjs.org/pdf-parse/-/pdf-parse-2.4.5.tgz 0ms (cache hit)
+102 http cache @napi-rs/canvas@https://registry.npmjs.org/@napi-rs/canvas/-/canvas-0.1.80.tgz 0ms (cache hit)
+103 silly tarball no local data for @napi-rs/canvas@https://registry.npmjs.org/@napi-rs/canvas/-/canvas-0.1.80.tgz. Extracting by manifest.
+104 silly tarball no local data for pdfjs-dist@https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-5.4.296.tgz. Extracting by manifest.
+105 silly tarball no local data for @napi-rs/canvas-darwin-arm64@https://registry.npmjs.org/@napi-rs/canvas-darwin-arm64/-/canvas-darwin-arm64-0.1.80.tgz. Extracting by manifest.
+106 silly tarball no local data for pdf-parse@https://registry.npmjs.org/pdf-parse/-/pdf-parse-2.4.5.tgz. Extracting by manifest.
+107 http fetch GET 200 https://registry.npmjs.org/@napi-rs/canvas/-/canvas-0.1.80.tgz 82ms (cache miss)
+108 http fetch POST 200 https://registry.npmjs.org/-/npm/v1/security/advisories/bulk 126ms
+109 silly audit report {}
+110 http fetch GET 200 https://registry.npmjs.org/pdf-parse/-/pdf-parse-2.4.5.tgz 1092ms (cache miss)
+111 http fetch GET 200 https://registry.npmjs.org/pdfjs-dist/-/pdfjs-dist-5.4.296.tgz 2560ms (cache miss)
+112 http fetch GET 200 https://registry.npmjs.org/@napi-rs/canvas-darwin-arm64/-/canvas-darwin-arm64-0.1.80.tgz 3055ms (cache miss)
+113 silly ADD
+114 silly ADD
+115 silly ADD
+116 silly ADD
+117 silly ADD
+118 silly ADD
+119 silly ADD
+120 silly ADD
+121 silly ADD node_modules/@napi-rs/canvas-darwin-arm64
+122 silly ADD
+123 silly ADD node_modules/pdfjs-dist
+124 silly ADD node_modules/@napi-rs/canvas
+125 silly ADD node_modules/pdf-parse
+126 verbose cwd /Users/joshuajohnson/Stuff/VoiceAI app/ai-receptionist
+127 verbose os Darwin 24.3.0
+128 verbose node v22.15.0
+129 verbose npm  v10.9.2
+130 verbose exit 0
+131 info ok
