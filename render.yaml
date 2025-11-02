@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ai-receptionist
+    env: node
+    buildCommand: npm ci
+    startCommand: npm start
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+
