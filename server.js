@@ -30,6 +30,8 @@ const app = express();
 const port = Number(process.env.PORT || 3001);
 const businessName = process.env.BUSINESS_NAME || 'our office';
 const businessTz = process.env.BUSINESS_TIMEZONE || 'America/New_York';
+const useTwilioTts = process.env.USE_TWILIO_TTS === '1';
+const validateTwilio = process.env.TWILIO_VALIDATE === '1';
 
 // Simple in-memory session state keyed by CallSid
 const sessionByCallSid = new Map();
@@ -53,12 +55,19 @@ app.get('/health', (_req, res) => {
   res.status(200).send('OK');
 });
 
+// Optional: simple GET probe for /voice/answer (helps quick checks in browser)
+app.get('/voice/answer', (_req, res) => {
+  res.type('text/plain').send('voice/answer OK (use POST for Twilio)');
+});
+
 // OpenAI TTS endpoint used by Twilio <Play>
 app.get('/tts', async (req, res) => {
   try {
     const text = String(req.query.text || '').slice(0, 1000);
     if (!text.trim()) return res.status(400).send('text required');
-    const { buffer, contentType } = await synthesizeSpeech(text);
+    const voice = (req.query.voice && String(req.query.voice)) || undefined;
+    const model = (req.query.model && String(req.query.model)) || undefined;
+    const { buffer, contentType } = await synthesizeSpeech(text, { voice, model });
     res.set('Content-Type', contentType);
     res.set('Cache-Control', 'public, max-age=300');
     return res.send(buffer);
@@ -70,14 +79,16 @@ app.get('/tts', async (req, res) => {
 
 // Inbound call webhook: answers and plays a greeting
 // Note: validation can be enabled by setting validate: true, but requires correct external URL/headers
-app.post('/voice/answer', twilio.webhook({ validate: false }), async (req, res) => {
-  const callSid = req.body.CallSid;
-  console.log('[voice/answer]', { callSid, from: req.body.From, to: req.body.To });
+app.post('/voice/answer', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
+  const from = (req.body && req.body.From) || (req.query && req.query.From) || '';
+  const to = (req.body && req.body.To) || (req.query && req.query.To) || '';
+  console.log('[voice/answer]', { callSid, from, to });
   sessionByCallSid.set(callSid, { state: 'start' });
   // persist call start
   try {
-    await upsertCall({ callSid, from: req.body.From, to: req.body.To });
-    await upsertCaller({ phone: req.body.From });
+    await upsertCall({ callSid, from, to });
+    await upsertCaller({ phone: from });
   } catch (e) {
     console.error('[persist] upsertCall error', e && e.message ? e.message : e);
   }
@@ -88,19 +99,34 @@ app.post('/voice/answer', twilio.webhook({ validate: false }), async (req, res) 
   const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
   try {
     const line = await generateGreeting({ businessName, timezone: businessTz });
-    gather.play(`${baseUrl}/tts?text=${encodeURIComponent(line)}`);
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say(line);
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(line)}`);
+    }
   } catch (e) {
     console.error('[voice/answer] greeting error', e && e.message ? e.message : e);
-    gather.play(`${baseUrl}/tts?text=${encodeURIComponent(`Hello, you've reached ${businessName}. How can I help you today?`)}`);
+    const fallback = `Hello, you've reached ${businessName}. How can I help you today?`;
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say(fallback);
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(fallback)}`);
+    }
   }
-  twiml.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, I did not hear you.')}`);
+  // Post-gather prompt and loop
+  if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+    twiml.say('Sorry, I did not hear you.');
+  } else {
+    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, I did not hear you.')}`);
+  }
   twiml.redirect(`${baseUrl}/voice/answer`);
   return res.type('text/xml').send(twiml.toString());
 });
 
-app.post('/voice/handle-input', twilio.webhook({ validate: false }), async (req, res) => {
-  const callSid = req.body.CallSid;
-  const speech = (req.body.SpeechResult || '').trim();
+app.post('/voice/handle-input', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
+  const from = (req.body && req.body.From) || (req.query && req.query.From) || '';
+  const speech = ((req.body && req.body.SpeechResult) || (req.query && req.query.SpeechResult) || '').trim();
   console.log('[voice/handle-input] incoming speech', { callSid, speech });
   const twiml = new twilio.twiml.VoiceResponse();
   const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
@@ -109,7 +135,11 @@ app.post('/voice/handle-input', twilio.webhook({ validate: false }), async (req,
 
   if (!speech) {
     const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
-    gather.play(`${baseUrl}/tts?text=${encodeURIComponent('I did not catch that. Please tell me how I can help.')}`);
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say('I did not catch that. Please tell me how I can help.');
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent('I did not catch that. Please tell me how I can help.')}`);
+    }
     return res.type('text/xml').send(twiml.toString());
   }
 
@@ -122,15 +152,36 @@ app.post('/voice/handle-input', twilio.webhook({ validate: false }), async (req,
 
   let intent;
   try {
-    const kb = await getRelevantContext(speech, 4);
-    const memory = await buildRecentMemorySnippet({ phone: req.body.From, callId: callSid });
+    let kb = '';
+    try { kb = await getRelevantContext(speech, 4); } catch (e) { if (process.env.DEBUG_AI) console.warn('[kb] error', e && e.message ? e.message : e); }
+    let memory = '';
+    try { memory = await buildRecentMemorySnippet({ phone: from, callId: callSid }); } catch (e) { if (process.env.DEBUG_AI) console.warn('[memory] error', e && e.message ? e.message : e); }
     const context = [memory, kb].filter(Boolean).join('\n\n');
     intent = await inferIntentFromText(speech, { businessName, timezone: businessTz, context });
     console.log('[voice/handle-input] intent', intent);
+    // Persist detected intent as a call event for analytics/auditing
+    try {
+      await insertCallEvent({
+        callSid,
+        type: 'intent_detected',
+        payload: {
+          intent: intent && intent.intent || 'general',
+          reply: intent && intent.reply || '',
+          datetimeISO: intent && intent.datetimeISO || null,
+          text: speech,
+        },
+      });
+    } catch (e) {
+      console.error('[persist] intent_detected event error', e && e.message ? e.message : e);
+    }
   } catch (err) {
     console.error('[voice/handle-input] intent error', err && err.message ? err.message : err);
     const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
-    gather.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, I had trouble understanding. Please say that again.')}`);
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say('Sorry, I had trouble understanding. Please say that again.');
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, I had trouble understanding. Please say that again.')}`);
+    }
     return res.type('text/xml').send(twiml.toString());
   }
 
@@ -180,15 +231,19 @@ app.post('/voice/handle-input', twilio.webhook({ validate: false }), async (req,
     return res.type('text/xml').send(twiml.toString());
   }
 
-  twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(intent.reply)}`);
+  if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+    twiml.say(intent.reply);
+  } else {
+    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(intent.reply)}`);
+  }
   const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
   return res.type('text/xml').send(twiml.toString());
 });
 
-app.post('/voice/schedule-time', twilio.webhook({ validate: false }), async (req, res) => {
-  const callSid = req.body.CallSid;
+app.post('/voice/schedule-time', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
   const state = sessionByCallSid.get(callSid) || {};
-  const speech = (req.body.SpeechResult || '').trim();
+  const speech = ((req.body && req.body.SpeechResult) || (req.query && req.query.SpeechResult) || '').trim();
   console.log('[voice/schedule-time] received', { callSid, state: state.state, speech });
   const twiml = new twilio.twiml.VoiceResponse();
   const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
@@ -212,9 +267,27 @@ app.post('/voice/schedule-time', twilio.webhook({ validate: false }), async (req
     const context = await getRelevantContext(speech, 4);
     intent = await inferIntentFromText(speech, { businessName, timezone: businessTz, context });
     console.log('[voice/schedule-time] intent', intent);
+    try {
+      await insertCallEvent({
+        callSid,
+        type: 'intent_detected',
+        payload: {
+          intent: intent && intent.intent || 'general',
+          reply: intent && intent.reply || '',
+          datetimeISO: intent && intent.datetimeISO || null,
+          text: speech,
+        },
+      });
+    } catch (e) {
+      console.error('[persist] intent_detected event error', e && e.message ? e.message : e);
+    }
   } catch (_) {
     const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto' });
-    gather.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, what date and time?')}`);
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say('Sorry, what date and time?');
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, what date and time?')}`);
+    }
     return res.type('text/xml').send(twiml.toString());
   }
 
@@ -246,13 +319,22 @@ app.post('/voice/schedule-time', twilio.webhook({ validate: false }), async (req
       console.error('[persist] insertCallEvent error', e && e.message ? e.message : e);
     }
     sessionByCallSid.set(callSid, { state: 'scheduled', eventId: evt.id });
-    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(`Great, I booked you for ${new Date(evt.start.dateTime || startISO2).toLocaleString('en-US', { timeZone: businessTz })}.`)}`);
+    const confirm = `Great, I booked you for ${new Date(evt.start.dateTime || startISO2).toLocaleString('en-US', { timeZone: businessTz })}.`;
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      twiml.say(confirm);
+    } else {
+      twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(confirm)}`);
+    }
     const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
     // No follow-up verbal prompt; just listen
     return res.type('text/xml').send(twiml.toString());
   } catch (err) {
     console.error('[calendar] create error', err && err.message ? err.message : err);
-    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent('I could not save that appointment. Please try again later.')}`);
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      twiml.say('I could not save that appointment. Please try again later.');
+    } else {
+      twiml.play(`${baseUrl}/tts?text=${encodeURIComponent('I could not save that appointment. Please try again later.')}`);
+    }
     return res.type('text/xml').send(twiml.toString());
   }
 });

@@ -34,11 +34,15 @@ async function inferIntentFromText(text, opts) {
   let now = getCurrentDateTimeISO();
   const timezone = (opts && opts.timezone) || 'America/Chicago';
   const context = (opts && opts.context) || '';
+  const faqSection = Array.isArray(arenamindFAQ)
+    ? ['\nArenamind FAQ (reference only if relevant):', ...arenamindFAQ.map(q => `- ${q}`)].join('\n')
+    : (typeof arenamindFAQ === 'string' ? arenamindFAQ : '');
+
   const system = [
-    servicesPrompt.system(),
-    receptionistPrompt.system(businessName),
-    calendarPrompt.system(),
-    arenamindFAQ.system(),
+    (servicesPrompt && typeof servicesPrompt.system === 'function') ? servicesPrompt.system() : '',
+    (receptionistPrompt && typeof receptionistPrompt.system === 'function') ? receptionistPrompt.system(businessName) : '',
+    (calendarPrompt && typeof calendarPrompt.system === 'function') ? calendarPrompt.system() : '',
+    faqSection,
     '',
     // Operational instructions for the task format the app expects
     'Analyze caller utterances and decide the intent.',
