@@ -29,9 +29,13 @@ if (missing.length) {
 const app = express();
 const port = Number(process.env.PORT || 3001);
 const businessName = process.env.BUSINESS_NAME || 'our office';
-const businessTz = process.env.BUSINESS_TIMEZONE || 'America/New_York';
+const businessTz = process.env.BUSINESS_TIMEZONE || 'America/Chicago';
 const useTwilioTts = process.env.USE_TWILIO_TTS === '1';
 const validateTwilio = process.env.TWILIO_VALIDATE === '1';
+const operatorNumber = process.env.OPERATOR_NUMBER || '';
+// Business hours configuration: e.g., BUSINESS_HOURS="09:00-17:00", BUSINESS_DAYS="1-5" (Mon-Fri)
+const businessHoursRange = process.env.BUSINESS_HOURS || '09:00-17:00';
+const businessDaysSpec = process.env.BUSINESS_DAYS || '1-5';
 
 // Simple in-memory session state keyed by CallSid
 const sessionByCallSid = new Map();
@@ -59,6 +63,106 @@ app.get('/health', (_req, res) => {
 app.get('/voice/answer', (_req, res) => {
   res.type('text/plain').send('voice/answer OK (use POST for Twilio)');
 });
+
+function parseBusinessDays(spec) {
+  try {
+    if (!spec) return new Set([0, 1, 2, 3, 4, 5, 6]);
+    const days = new Set();
+    for (const part of String(spec).split(',')) {
+      const p = part.trim();
+      if (!p) continue;
+      if (p.includes('-')) {
+        const [a, b] = p.split('-').map((x) => Number(x));
+        if (Number.isFinite(a) && Number.isFinite(b)) {
+          for (let d = Math.min(a, b); d <= Math.max(a, b); d++) days.add(d);
+        }
+      } else {
+        const n = Number(p);
+        if (Number.isFinite(n)) days.add(n);
+      }
+    }
+    if (days.size === 0) return new Set([0, 1, 2, 3, 4, 5, 6]);
+    return days;
+  } catch (_) {
+    return new Set([0, 1, 2, 3, 4, 5, 6]);
+  }
+}
+
+function getNowPartsInTimezone(tz) {
+  const now = new Date();
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hour12: false,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const parts = fmt.formatToParts(now);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value || '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value || '0');
+  const weekdayStr = parts.find((p) => p.type === 'weekday')?.value || 'Sun';
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const day = map[weekdayStr] ?? 0;
+  return { day, minutes: hour * 60 + minute };
+}
+
+function isBusinessOpen({ timezone, hoursRange, daysSpec }) {
+  try {
+    const days = parseBusinessDays(daysSpec);
+    const { day, minutes } = getNowPartsInTimezone(timezone);
+    if (!days.has(day)) return false;
+    const [openStr, closeStr] = String(hoursRange).split('-');
+    const [oh, om] = (openStr || '00:00').split(':').map((x) => Number(x));
+    const [ch, cm] = (closeStr || '23:59').split(':').map((x) => Number(x));
+    const openMin = (Number.isFinite(oh) ? oh : 0) * 60 + (Number.isFinite(om) ? om : 0);
+    const closeMin = (Number.isFinite(ch) ? ch : 23) * 60 + (Number.isFinite(cm) ? cm : 59);
+    return minutes >= openMin && minutes <= closeMin;
+  } catch (_) {
+    return true;
+  }
+}
+
+function getPartsForDateInTimezone(date, tz) {
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    hour12: false,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const parts = fmt.formatToParts(date);
+  const hour = Number(parts.find((p) => p.type === 'hour')?.value || '0');
+  const minute = Number(parts.find((p) => p.type === 'minute')?.value || '0');
+  const weekdayStr = parts.find((p) => p.type === 'weekday')?.value || 'Sun';
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const day = map[weekdayStr] ?? 0;
+  return { day, minutes: hour * 60 + minute };
+}
+
+function isWithinBusinessHoursAt(isoString, { timezone, hoursRange, daysSpec }) {
+  try {
+    const d = new Date(isoString);
+    if (Number.isNaN(d.getTime())) return false;
+    const days = parseBusinessDays(daysSpec);
+    const { day, minutes } = getPartsForDateInTimezone(d, timezone);
+    if (!days.has(day)) return false;
+    const [openStr, closeStr] = String(hoursRange).split('-');
+    const [oh, om] = (openStr || '00:00').split(':').map((x) => Number(x));
+    const [ch, cm] = (closeStr || '23:59').split(':').map((x) => Number(x));
+    const openMin = (Number.isFinite(oh) ? oh : 0) * 60 + (Number.isFinite(om) ? om : 0);
+    const closeMin = (Number.isFinite(ch) ? ch : 23) * 60 + (Number.isFinite(cm) ? cm : 59);
+    return minutes >= openMin && minutes <= closeMin;
+  } catch (_) {
+    return false;
+  }
+}
+
+function businessDaysHuman(spec) {
+  const s = String(spec || '').trim();
+  if (s === '1-5') return 'Mon–Fri';
+  if (s === '0-6') return 'Sun–Sat';
+  return s || 'Mon–Fri';
+}
 
 // OpenAI TTS endpoint used by Twilio <Play>
 app.get('/tts', async (req, res) => {
@@ -96,13 +200,19 @@ app.post('/voice/answer', express.urlencoded({ extended: false }), twilio.webhoo
   const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
   const host = req.get('host');
   const baseUrl = `${proto}://${host}`;
-  const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
+  const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
   try {
     const line = await generateGreeting({ businessName, timezone: businessTz });
     if (useTwilioTts || !process.env.OPENAI_API_KEY) {
       gather.say(line);
     } else {
       gather.play(`${baseUrl}/tts?text=${encodeURIComponent(line)}`);
+    }
+    const transferHint = 'You can press 0 at any time to speak with a person.';
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say(transferHint);
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(transferHint)}`);
     }
   } catch (e) {
     console.error('[voice/answer] greeting error', e && e.message ? e.message : e);
@@ -113,13 +223,6 @@ app.post('/voice/answer', express.urlencoded({ extended: false }), twilio.webhoo
       gather.play(`${baseUrl}/tts?text=${encodeURIComponent(fallback)}`);
     }
   }
-  // Post-gather prompt and loop
-  if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-    twiml.say('Sorry, I did not hear you.');
-  } else {
-    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, I did not hear you.')}`);
-  }
-  twiml.redirect(`${baseUrl}/voice/answer`);
   return res.type('text/xml').send(twiml.toString());
 });
 
@@ -127,19 +230,43 @@ app.post('/voice/handle-input', express.urlencoded({ extended: false }), twilio.
   const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
   const from = (req.body && req.body.From) || (req.query && req.query.From) || '';
   const speech = ((req.body && req.body.SpeechResult) || (req.query && req.query.SpeechResult) || '').trim();
+  const digits = ((req.body && req.body.Digits) || (req.query && req.query.Digits) || '').trim();
   console.log('[voice/handle-input] incoming speech', { callSid, speech });
   const twiml = new twilio.twiml.VoiceResponse();
   const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
   const host = req.get('host');
   const baseUrl = `${proto}://${host}`;
+  const session = sessionByCallSid.get(callSid) || { state: 'start' };
+
+  // DTMF shortcut to transfer
+  if (digits === '0') {
+    try { await insertCallEvent({ callSid, type: 'transfer_requested', payload: { method: 'dtmf' } }); } catch (_) {}
+    twiml.redirect(`${baseUrl}/voice/transfer`);
+    return res.type('text/xml').send(twiml.toString());
+  }
 
   if (!speech) {
-    const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
-    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-      gather.say('I did not catch that. Please tell me how I can help.');
-    } else {
-      gather.play(`${baseUrl}/tts?text=${encodeURIComponent('I did not catch that. Please tell me how I can help.')}`);
+    const retries = Number(session.retries || 0) + 1;
+    sessionByCallSid.set(callSid, { ...session, retries });
+    try { await insertCallEvent({ callSid, type: 'gather_no_input', payload: { retries } }); } catch (_) {}
+    if (retries >= 2) {
+      const msg = 'I did not hear anything. Transferring you to voicemail.';
+      if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+        twiml.say(msg);
+      } else {
+        twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`);
+      }
+      twiml.redirect(`${baseUrl}/voice/voicemail`);
+      return res.type('text/xml').send(twiml.toString());
     }
+    const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
+    const prompt = 'I did not catch that. Please tell me how I can help. You can press 0 to speak with a person.';
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      gather.say(prompt);
+    } else {
+      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(prompt)}`);
+    }
+    try { await insertCallEvent({ callSid, type: 'gather_retry', payload: { retries } }); } catch (_) {}
     return res.type('text/xml').send(twiml.toString());
   }
 
@@ -192,6 +319,15 @@ app.post('/voice/handle-input', express.urlencoded({ extended: false }), twilio.
     console.error('[persist] insertAssistantMessage error', e && e.message ? e.message : e);
   }
 
+  // Human transfer intent bridge
+  const sLower = speech.toLowerCase();
+  const wantsHuman = intent?.intent === 'transfer' || /(human|representative|agent|operator|someone|person)/.test(sLower);
+  if (wantsHuman) {
+    try { await insertCallEvent({ callSid, type: 'transfer_requested', payload: { method: 'intent' } }); } catch (_) {}
+    twiml.redirect(`${baseUrl}/voice/transfer`);
+    return res.type('text/xml').send(twiml.toString());
+  }
+
   if (intent.intent === 'schedule') {
     let parsedISO = intent.datetimeISO;
     if (!parsedISO) {
@@ -201,6 +337,14 @@ app.post('/voice/handle-input', express.urlencoded({ extended: false }), twilio.
     if (parsedISO) {
       try {
         let startISO = ensureFutureIso(parsedISO);
+        // Enforce business hours for scheduling
+        if (!isWithinBusinessHoursAt(startISO, { timezone: businessTz, hoursRange: businessHoursRange, daysSpec: businessDaysSpec })) {
+          try { await insertCallEvent({ callSid, type: 'outside_business_hours', payload: { requested: startISO } }); } catch (_) {}
+          const msg = `That time is outside business hours. Please choose a time ${businessDaysHuman(businessDaysSpec)} between ${businessHoursRange}.`;
+          const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
+          if (useTwilioTts || !process.env.OPENAI_API_KEY) { gather.say(msg); } else { gather.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`); }
+          return res.type('text/xml').send(twiml.toString());
+        }
         console.log('[datetime] now:', getCurrentDateTimeISO(), 'normalized start:', startISO);
         const evt = await createEvent({
           summary: `Call with ${businessName}`,
@@ -236,7 +380,7 @@ app.post('/voice/handle-input', express.urlencoded({ extended: false }), twilio.
   } else {
     twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(intent.reply)}`);
   }
-  const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
+  const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
   return res.type('text/xml').send(twiml.toString());
 });
 
@@ -282,7 +426,7 @@ app.post('/voice/schedule-time', express.urlencoded({ extended: false }), twilio
       console.error('[persist] intent_detected event error', e && e.message ? e.message : e);
     }
   } catch (_) {
-    const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto' });
+    const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
     if (useTwilioTts || !process.env.OPENAI_API_KEY) {
       gather.say('Sorry, what date and time?');
     } else {
@@ -304,6 +448,13 @@ app.post('/voice/schedule-time', express.urlencoded({ extended: false }), twilio
 
   try {
     let startISO2 = ensureFutureIso(intent.datetimeISO);
+    if (!isWithinBusinessHoursAt(startISO2, { timezone: businessTz, hoursRange: businessHoursRange, daysSpec: businessDaysSpec })) {
+      try { await insertCallEvent({ callSid, type: 'outside_business_hours', payload: { requested: startISO2 } }); } catch (_) {}
+      const msg = `That time is outside business hours. Please choose a time ${businessDaysHuman(businessDaysSpec)} between ${businessHoursRange}.`;
+      const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
+      if (useTwilioTts || !process.env.OPENAI_API_KEY) { gather.say(msg); } else { gather.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`); }
+      return res.type('text/xml').send(twiml.toString());
+    }
     console.log('[datetime] now:', getCurrentDateTimeISO(), 'normalized start:', startISO2);
     const evt = await createEvent({
       summary: `Call with ${businessName}`,
@@ -337,6 +488,85 @@ app.post('/voice/schedule-time', express.urlencoded({ extended: false }), twilio
     }
     return res.type('text/xml').send(twiml.toString());
   }
+});
+
+// --- Transfer to human operator ---
+app.post('/voice/transfer', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
+  const twiml = new twilio.twiml.VoiceResponse();
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
+  const host = req.get('host');
+  const baseUrl = `${proto}://${host}`;
+  try { await insertCallEvent({ callSid, type: 'transfer_attempt', payload: { operatorNumber: operatorNumber || null } }); } catch (_) {}
+  if (!operatorNumber) {
+    const msg = 'No operator number is configured.';
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      twiml.say(msg);
+    } else {
+      twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`);
+    }
+    twiml.redirect(`${baseUrl}/voice/voicemail`);
+    return res.type('text/xml').send(twiml.toString());
+  }
+  const dial = twiml.dial({ answerOnBridge: true, timeout: 20, action: `${baseUrl}/voice/dial-action`, method: 'POST' });
+  dial.number(operatorNumber);
+  return res.type('text/xml').send(twiml.toString());
+});
+
+app.post('/voice/dial-action', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
+  const dialStatus = (req.body && req.body.DialCallStatus) || (req.query && req.query.DialCallStatus) || '';
+  const twiml = new twilio.twiml.VoiceResponse();
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
+  const host = req.get('host');
+  const baseUrl = `${proto}://${host}`;
+  try { await insertCallEvent({ callSid, type: 'transfer_result', payload: { dialStatus } }); } catch (_) {}
+  if (dialStatus === 'completed') {
+    const msg = 'Thank you for calling.';
+    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+      twiml.say(msg);
+    } else {
+      twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`);
+    }
+    return res.type('text/xml').send(twiml.toString());
+  }
+  const msg = 'No one is available to take your call. Please leave a message after the beep.';
+  if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+    twiml.say(msg);
+  } else {
+    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`);
+  }
+  twiml.redirect(`${baseUrl}/voice/voicemail`);
+  return res.type('text/xml').send(twiml.toString());
+});
+
+// --- Voicemail ---
+app.post('/voice/voicemail', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
+  const twiml = new twilio.twiml.VoiceResponse();
+  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
+  const host = req.get('host');
+  const baseUrl = `${proto}://${host}`;
+  try { await insertCallEvent({ callSid, type: 'voicemail_started', payload: {} }); } catch (_) {}
+  const msg = `Please leave your name, phone number, and a short message for ${businessName}.`;
+  if (useTwilioTts || !process.env.OPENAI_API_KEY) {
+    twiml.say(msg);
+  } else {
+    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`);
+  }
+  twiml.record({ maxLength: 120, playBeep: true, action: `${baseUrl}/voice/voicemail-status`, method: 'POST', recordingStatusCallback: `${baseUrl}/voice/voicemail-status`, recordingStatusCallbackEvent: ['completed'] });
+  return res.type('text/xml').send(twiml.toString());
+});
+
+app.post('/voice/voicemail-status', express.urlencoded({ extended: false }), async (req, res) => {
+  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
+  const recordingUrl = (req.body && (req.body.RecordingUrl || req.body.RecordingUrl0)) || (req.query && (req.query.RecordingUrl || req.query.RecordingUrl0)) || '';
+  const recordingSid = (req.body && req.body.RecordingSid) || (req.query && req.query.RecordingSid) || '';
+  const duration = (req.body && req.body.RecordingDuration) || (req.query && req.query.RecordingDuration) || '';
+  try {
+    await insertCallEvent({ callSid, type: 'voicemail_saved', payload: { recordingSid, recordingUrl, duration } });
+  } catch (_) {}
+  res.type('text/xml').send(new twilio.twiml.VoiceResponse().toString());
 });
 
 // Debug endpoints (local/json tests)
@@ -540,6 +770,17 @@ app.post('/voice/status', express.urlencoded({ extended: false }), async (req, r
   const callSid = req.body.CallSid;
   const status = req.body.CallStatus; // e.g., completed, busy, failed
   try {
+    if (callSid && status) {
+      const payload = {
+        status,
+        direction: req.body.Direction || undefined,
+        from: req.body.From || undefined,
+        to: req.body.To || undefined,
+        duration: req.body.CallDuration || undefined,
+        timestamp: req.body.Timestamp || undefined,
+      };
+      try { await insertCallEvent({ callSid, type: 'twilio_status', payload }); } catch (_) {}
+    }
     if (status === 'completed' && callSid) {
       const messages = await getCallTranscript(callSid);
       const summary = await generateCallSummaryFromMessages(messages, { businessName });
