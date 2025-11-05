@@ -1,3 +1,10 @@
+/**
+ * Google Calendar service
+ * - OAuth via env (client id/secret/redirect + refresh token)
+ * - createEvent: insert timed event using startISO + duration + timezone
+ * - listUpcomingEvents: simple listing (primary calendar)
+ * - getEventById: fetch single event
+ */
 const path = require('path');
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
 const { google } = require('googleapis');
@@ -28,6 +35,8 @@ function getOAuthClientFromEnv() {
   return oauth2Client;
 }
 
+// Creates a timed event using startISO and durationMinutes on 'primary' calendar
+// If you need end by clock-time instead, compute endISO externally
 async function createEvent({ summary, description, startISO, durationMinutes = 30, timezone = 'America/Chicago' }) {
   const auth = getOAuthClientFromEnv();
   const calendar = google.calendar({ version: 'v3', auth });

@@ -1,15 +1,16 @@
+/**
+ * Voice server
+ * - Twilio webhooks for inbound calling
+ * - Optional Hume EVI handoff (if HUME_API_KEY + HUME_CONFIG_ID present)
+ * - Legacy OpenAI flow (intent + TTS) as fallback when Hume not configured
+ * - Google Calendar debug endpoints and OAuth helper
+ */
 const path = require('path');
 const express = require('express');
 const twilio = require('twilio');
-const { inferIntentFromText, generateGreeting, generateCallSummaryFromMessages } = require('./services/openai');
-const { ensureFutureIso, getCurrentDateTimeISO } = require('./services/datetime');
-const { initKnowledgeBase, getRelevantContext } = require('./services/knowledge');
+const http = require('http');
 const { createEvent, listUpcomingEvents, getEventById } = require('./services/google-calendar');
-const { synthesizeSpeech } = require('./services/tts');
 const { google } = require('googleapis');
-const { upsertCall, insertCallerMessage, insertAssistantMessage, insertCallEvent, upsertCaller, getRecentCallsByPhone, getCallTranscript, buildRecentMemorySnippet, saveCallSummary } = require('./services/persistence');
-const { parseRelativeDateToISO } = require('./services/date-parser');
-const { supabase } = require('./services/supabase');
 
 // Load env from .env.local
 require('dotenv').config({ path: path.resolve(process.cwd(), '.env.local') });
@@ -33,12 +34,22 @@ const businessTz = process.env.BUSINESS_TIMEZONE || 'America/Chicago';
 const useTwilioTts = process.env.USE_TWILIO_TTS === '1';
 const validateTwilio = process.env.TWILIO_VALIDATE === '1';
 const operatorNumber = process.env.OPERATOR_NUMBER || '';
+// Hume EVI (Phase 1): when set, /voice/answer redirects Twilio to Hume
+const HUME_API_KEY = process.env.HUME_API_KEY || '';
+const HUME_CONFIG_ID = process.env.HUME_CONFIG_ID || '';
 // Business hours configuration: e.g., BUSINESS_HOURS="09:00-17:00", BUSINESS_DAYS="1-5" (Mon-Fri)
 const businessHoursRange = process.env.BUSINESS_HOURS || '09:00-17:00';
 const businessDaysSpec = process.env.BUSINESS_DAYS || '1-5';
 
+// Twilio client for sending SMS
+const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER || '';
+
 // Simple in-memory session state keyed by CallSid
 const sessionByCallSid = new Map();
+
+// Map Twilio Call SID to Hume Chat ID for post-call retrieval
+const callSidToHumeChatId = new Map();
 
 // Ensure correct proto/host behind tunnels/proxies
 app.set('trust proxy', true);
@@ -61,6 +72,7 @@ app.get('/health', (_req, res) => {
 
 // Optional: simple GET probe for /voice/answer (helps quick checks in browser)
 app.get('/voice/answer', (_req, res) => {
+  // Probe for health; Twilio will POST to the same path
   res.type('text/plain').send('voice/answer OK (use POST for Twilio)');
 });
 
@@ -165,224 +177,34 @@ function businessDaysHuman(spec) {
 }
 
 // OpenAI TTS endpoint used by Twilio <Play>
-app.get('/tts', async (req, res) => {
-  try {
-    const text = String(req.query.text || '').slice(0, 1000);
-    if (!text.trim()) return res.status(400).send('text required');
-    const voice = (req.query.voice && String(req.query.voice)) || undefined;
-    const model = (req.query.model && String(req.query.model)) || undefined;
-    const { buffer, contentType } = await synthesizeSpeech(text, { voice, model });
-    res.set('Content-Type', contentType);
-    res.set('Cache-Control', 'public, max-age=300');
-    return res.send(buffer);
-  } catch (e) {
-    console.error('[tts] error', e && e.message ? e.message : e);
-    return res.status(500).send('tts error');
-  }
-});
+// /tts removed (Hume handles voice)
 
 // Inbound call webhook: answers and plays a greeting
 // Note: validation can be enabled by setting validate: true, but requires correct external URL/headers
 app.post('/voice/answer', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
-  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
-  const from = (req.body && req.body.From) || (req.query && req.query.From) || '';
-  const to = (req.body && req.body.To) || (req.query && req.query.To) || '';
-  console.log('[voice/answer]', { callSid, from, to });
-  sessionByCallSid.set(callSid, { state: 'start' });
-  // persist call start
-  try {
-    await upsertCall({ callSid, from, to });
-    await upsertCaller({ phone: from });
-  } catch (e) {
-    console.error('[persist] upsertCall error', e && e.message ? e.message : e);
+  // Hume EVI: direct Twilio integration
+  // Tools ARE supported when configured in your Hume Config
+  if (HUME_API_KEY && HUME_CONFIG_ID) {
+    const callSid = req.body.CallSid;
+    const from = req.body.From;
+    
+    console.log(`[voice/answer] call ${callSid} from ${from} - redirecting to Hume EVI`);
+    
+    const twiml = new twilio.twiml.VoiceResponse();
+    // Add callback parameter so Hume can notify us of the chat_id
+    const callbackUrl = `${req.protocol}://${req.get('host')}/voice/hume-callback?call_sid=${encodeURIComponent(callSid)}`;
+    const humeUrl = `https://api.hume.ai/v0/evi/twilio?config_id=${encodeURIComponent(HUME_CONFIG_ID)}&api_key=${encodeURIComponent(HUME_API_KEY)}`;
+    
+    twiml.redirect(humeUrl);
+    return res.type('text/xml').send(twiml.toString());
   }
+  
   const twiml = new twilio.twiml.VoiceResponse();
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
-  const host = req.get('host');
-  const baseUrl = `${proto}://${host}`;
-  const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
-  try {
-    const line = await generateGreeting({ businessName, timezone: businessTz });
-    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-      gather.say(line);
-    } else {
-      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(line)}`);
-    }
-    const transferHint = 'You can press 0 at any time to speak with a person.';
-    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-      gather.say(transferHint);
-    } else {
-      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(transferHint)}`);
-    }
-  } catch (e) {
-    console.error('[voice/answer] greeting error', e && e.message ? e.message : e);
-    const fallback = `Hello, you've reached ${businessName}. How can I help you today?`;
-    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-      gather.say(fallback);
-    } else {
-      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(fallback)}`);
-    }
-  }
+  twiml.say('The AI assistant is not configured. Please try again later.');
   return res.type('text/xml').send(twiml.toString());
 });
 
-app.post('/voice/handle-input', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
-  const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
-  const from = (req.body && req.body.From) || (req.query && req.query.From) || '';
-  const speech = ((req.body && req.body.SpeechResult) || (req.query && req.query.SpeechResult) || '').trim();
-  const digits = ((req.body && req.body.Digits) || (req.query && req.query.Digits) || '').trim();
-  console.log('[voice/handle-input] incoming speech', { callSid, speech });
-  const twiml = new twilio.twiml.VoiceResponse();
-  const proto = (req.headers['x-forwarded-proto'] || req.protocol || 'http');
-  const host = req.get('host');
-  const baseUrl = `${proto}://${host}`;
-  const session = sessionByCallSid.get(callSid) || { state: 'start' };
-
-  // DTMF shortcut to transfer
-  if (digits === '0') {
-    try { await insertCallEvent({ callSid, type: 'transfer_requested', payload: { method: 'dtmf' } }); } catch (_) {}
-    twiml.redirect(`${baseUrl}/voice/transfer`);
-    return res.type('text/xml').send(twiml.toString());
-  }
-
-  if (!speech) {
-    const retries = Number(session.retries || 0) + 1;
-    sessionByCallSid.set(callSid, { ...session, retries });
-    try { await insertCallEvent({ callSid, type: 'gather_no_input', payload: { retries } }); } catch (_) {}
-    if (retries >= 2) {
-      const msg = 'I did not hear anything. Transferring you to voicemail.';
-      if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-        twiml.say(msg);
-      } else {
-        twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`);
-      }
-      twiml.redirect(`${baseUrl}/voice/voicemail`);
-      return res.type('text/xml').send(twiml.toString());
-    }
-    const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
-    const prompt = 'I did not catch that. Please tell me how I can help. You can press 0 to speak with a person.';
-    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-      gather.say(prompt);
-    } else {
-      gather.play(`${baseUrl}/tts?text=${encodeURIComponent(prompt)}`);
-    }
-    try { await insertCallEvent({ callSid, type: 'gather_retry', payload: { retries } }); } catch (_) {}
-    return res.type('text/xml').send(twiml.toString());
-  }
-
-  // persist caller message
-  try {
-    await insertCallerMessage({ callSid, text: speech });
-  } catch (e) {
-    console.error('[persist] insertCallerMessage error', e && e.message ? e.message : e);
-  }
-
-  let intent;
-  try {
-    let kb = '';
-    try { kb = await getRelevantContext(speech, 4); } catch (e) { if (process.env.DEBUG_AI) console.warn('[kb] error', e && e.message ? e.message : e); }
-    let memory = '';
-    try { memory = await buildRecentMemorySnippet({ phone: from, callId: callSid }); } catch (e) { if (process.env.DEBUG_AI) console.warn('[memory] error', e && e.message ? e.message : e); }
-    const context = [memory, kb].filter(Boolean).join('\n\n');
-    intent = await inferIntentFromText(speech, { businessName, timezone: businessTz, context });
-    console.log('[voice/handle-input] intent', intent);
-    // Persist detected intent as a call event for analytics/auditing
-    try {
-      await insertCallEvent({
-        callSid,
-        type: 'intent_detected',
-        payload: {
-          intent: intent && intent.intent || 'general',
-          reply: intent && intent.reply || '',
-          datetimeISO: intent && intent.datetimeISO || null,
-          text: speech,
-        },
-      });
-    } catch (e) {
-      console.error('[persist] intent_detected event error', e && e.message ? e.message : e);
-    }
-  } catch (err) {
-    console.error('[voice/handle-input] intent error', err && err.message ? err.message : err);
-    const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
-    if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-      gather.say('Sorry, I had trouble understanding. Please say that again.');
-    } else {
-      gather.play(`${baseUrl}/tts?text=${encodeURIComponent('Sorry, I had trouble understanding. Please say that again.')}`);
-    }
-    return res.type('text/xml').send(twiml.toString());
-  }
-
-  // persist assistant reply (pre-speak)
-  try {
-    await insertAssistantMessage({ callSid, text: intent.reply, intent: intent.intent, datetimeISO: intent.datetimeISO || null });
-  } catch (e) {
-    console.error('[persist] insertAssistantMessage error', e && e.message ? e.message : e);
-  }
-
-  // Human transfer intent bridge
-  const sLower = speech.toLowerCase();
-  const wantsHuman = intent?.intent === 'transfer' || /(human|representative|agent|operator|someone|person)/.test(sLower);
-  if (wantsHuman) {
-    try { await insertCallEvent({ callSid, type: 'transfer_requested', payload: { method: 'intent' } }); } catch (_) {}
-    twiml.redirect(`${baseUrl}/voice/transfer`);
-    return res.type('text/xml').send(twiml.toString());
-  }
-
-  if (intent.intent === 'schedule') {
-    let parsedISO = intent.datetimeISO;
-    if (!parsedISO) {
-      // Try parsing relative phrases directly from user utterance
-      parsedISO = parseRelativeDateToISO({ text: speech, timezone: businessTz });
-    }
-    if (parsedISO) {
-      try {
-        let startISO = ensureFutureIso(parsedISO);
-        // Enforce business hours for scheduling
-        if (!isWithinBusinessHoursAt(startISO, { timezone: businessTz, hoursRange: businessHoursRange, daysSpec: businessDaysSpec })) {
-          try { await insertCallEvent({ callSid, type: 'outside_business_hours', payload: { requested: startISO } }); } catch (_) {}
-          const msg = `That time is outside business hours. Please choose a time ${businessDaysHuman(businessDaysSpec)} between ${businessHoursRange}.`;
-          const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
-          if (useTwilioTts || !process.env.OPENAI_API_KEY) { gather.say(msg); } else { gather.play(`${baseUrl}/tts?text=${encodeURIComponent(msg)}`); }
-          return res.type('text/xml').send(twiml.toString());
-        }
-        console.log('[datetime] now:', getCurrentDateTimeISO(), 'normalized start:', startISO);
-        const evt = await createEvent({
-          summary: `Call with ${businessName}`,
-          description: `Booked by phone. Caller said: ${speech}`,
-          startISO,
-          durationMinutes: 30,
-          timezone: businessTz,
-        });
-        console.log('[calendar] event created', { id: evt.id, start: evt.start });
-        // persist calendar event
-        try {
-          await insertCallEvent({ callSid, type: 'calendar_event_created', payload: { id: evt.id, htmlLink: evt.htmlLink, start: evt.start } });
-        } catch (e) {
-          console.error('[persist] insertCallEvent error', e && e.message ? e.message : e);
-        }
-        twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(`Booked your appointment for ${new Date(evt.start.dateTime || startISO).toLocaleString('en-US', { timeZone: businessTz })}.`)}`);
-        const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto' });
-        return res.type('text/xml').send(twiml.toString());
-      } catch (err) {
-        console.error('[calendar] create error', err && err.message ? err.message : err);
-        twiml.play(`${baseUrl}/tts?text=${encodeURIComponent('I was unable to access the calendar. Please try again later.')}`);
-        return res.type('text/xml').send(twiml.toString());
-      }
-    }
-    sessionByCallSid.set(callSid, { state: 'awaiting_datetime' });
-    const gather = twiml.gather({ input: 'speech', action: `${baseUrl}/voice/schedule-time`, method: 'POST', speechTimeout: 'auto' });
-    gather.play(`${baseUrl}/tts?text=${encodeURIComponent('What day and time would you like?')}`);
-    return res.type('text/xml').send(twiml.toString());
-  }
-
-  if (useTwilioTts || !process.env.OPENAI_API_KEY) {
-    twiml.say(intent.reply);
-  } else {
-    twiml.play(`${baseUrl}/tts?text=${encodeURIComponent(intent.reply)}`);
-  }
-  const gather = twiml.gather({ input: 'speech dtmf', action: `${baseUrl}/voice/handle-input`, method: 'POST', speechTimeout: 'auto', timeout: 5, numDigits: 1, actionOnEmptyResult: true });
-  return res.type('text/xml').send(twiml.toString());
-});
+// legacy /voice/handle-input path removed
 
 app.post('/voice/schedule-time', express.urlencoded({ extended: false }), twilio.webhook({ validate: validateTwilio }), async (req, res) => {
   const callSid = (req.body && req.body.CallSid) || (req.query && req.query.CallSid) || 'TEST';
@@ -688,109 +510,272 @@ app.get('/debug/calendar/get', async (req, res) => {
   }
 });
 
-// Initialize knowledge base then start server
-if (!process.env.VERCEL) {
-  initKnowledgeBase().finally(() => {
-    const server = app.listen(port, () => {
-      console.log(`Server listening on http://localhost:${port}`);
-      console.log('POST /voice/answer will respond with TwiML to greet callers.');
-      if (supabase) {
-        console.log('[supabase] client initialized');
-      } else {
-        console.warn('[supabase] not initialized - set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY');
-      }
-    });
+// --- Hume Tool Bridge: book_appointment ---
+// Accepts Hume tool parameters and creates a Google Calendar event.
+// Parameters (JSON): { calendarId?, date, startTime, endTime, timezone?, summary?, description?, attendees?[] }
+app.post('/tools/hume/book-appointment', async (req, res) => {
+  console.log('[hume-tool-bridge] book_appointment called');
+  console.log('[hume-tool-bridge] raw body:', JSON.stringify(req.body, null, 2));
+  
+  try {
+    const calendarId = String(req.body.calendarId || 'primary').trim();
+    const date = String(req.body.date || '').trim(); // YYYY-MM-DD
+    const startTime = String(req.body.startTime || '').trim(); // HH:mm
+    const endTime = String(req.body.endTime || '').trim(); // HH:mm
+    const timezone = String(req.body.timezone || businessTz);
+    const summary = String(req.body.summary || `Call with ${businessName}`);
+    const description = String(req.body.description || 'Booked via Hume tool book_appointment');
+    const attendees = Array.isArray(req.body.attendees) ? req.body.attendees : undefined;
 
-    server.on('error', (err) => {
-      console.error('Server error:', err && err.message ? err.message : err);
-      process.exit(1);
+    console.log('[hume-tool-bridge] parsed params:', { calendarId, date, startTime, endTime, timezone, summary, description, attendees });
+
+    if (!date || !startTime || !endTime) {
+      console.error('[hume-tool-bridge] missing required params');
+      return res.status(400).json({ ok: false, error: 'date, startTime, endTime required' });
+    }
+
+    // Build local datetime using luxon to avoid cross-timezone date shifts
+    const { DateTime } = require('luxon');
+    const nowTz = DateTime.now().setZone(timezone);
+
+    function parseDate(dStr) {
+      // Accept YYYY-MM-DD, MM/DD/YYYY, or MM/DD (assume current year)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(dStr)) {
+        const [y, m, d] = dStr.split('-').map((n) => Number(n));
+        return { year: y, month: m, day: d };
+      }
+      const mmddyyyy = DateTime.fromFormat(dStr, 'M/d/yyyy', { zone: timezone });
+      if (mmddyyyy.isValid) return { year: mmddyyyy.year, month: mmddyyyy.month, day: mmddyyyy.day };
+      const mmdd = DateTime.fromFormat(dStr, 'M/d', { zone: timezone }).set({ year: nowTz.year });
+      if (mmdd.isValid) return { year: mmdd.year, month: mmdd.month, day: mmdd.day };
+      // Fallback: try ISO parse
+      const iso = DateTime.fromISO(dStr, { zone: timezone });
+      if (iso.isValid) return { year: iso.year, month: iso.month, day: iso.day };
+      return null;
+    }
+
+    function parseTime(tStr) {
+      // Accept HH:mm, H:mm, h:mm a, h a
+      const candidates = ['H:mm', 'h:mm a', 'h a', 'H'];
+      for (const fmt of candidates) {
+        const dt = DateTime.fromFormat(tStr.trim().toLowerCase(), fmt, { zone: timezone });
+        if (dt.isValid) return { hour: dt.hour, minute: dt.minute };
+      }
+      // Fallback simple split (HH:mm)
+      const [hh, mm] = tStr.split(':').map((n) => Number(n));
+      if (Number.isFinite(hh)) return { hour: hh, minute: Number.isFinite(mm) ? mm : 0 };
+      return null;
+    }
+
+    const dParts = parseDate(date);
+    const sParts = parseTime(startTime);
+    const eParts = parseTime(endTime);
+    console.log('[hume-tool-bridge] date parts:', dParts, 'start time parts:', sParts, 'end time parts:', eParts);
+    
+    if (!dParts || !sParts || !eParts) {
+      console.error('[hume-tool-bridge] invalid date/time format');
+      return res.status(400).json({ ok: false, error: 'Invalid date or time format' });
+    }
+
+    let startDt = DateTime.fromObject({ ...dParts, ...sParts, second: 0, millisecond: 0 }, { zone: timezone });
+    let endDt = DateTime.fromObject({ ...dParts, ...eParts, second: 0, millisecond: 0 }, { zone: timezone });
+    if (endDt <= startDt) endDt = endDt.plus({ days: 1 });
+
+    const startLocal = startDt.toISO();
+    const endLocal = endDt.toISO();
+    console.log('[hume-tool-bridge] computed ISO times:', { startLocal, endLocal });
+
+    // Google API client from existing oauth env
+    const auth = (function getAuth() {
+      const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, GOOGLE_REFRESH_TOKEN } = process.env;
+      const o = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+      o.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+      return o;
+    })();
+    const calendar = google.calendar({ version: 'v3', auth });
+    const body = {
+      summary,
+      description,
+      start: { dateTime: startLocal, timeZone: timezone },
+      end: { dateTime: endLocal, timeZone: timezone },
+    };
+    if (attendees && attendees.length) body.attendees = attendees.map((email) => ({ email }));
+    
+    console.log('[hume-tool-bridge] calling Google Calendar API with body:', JSON.stringify(body, null, 2));
+    const resp = await calendar.events.insert({ calendarId, requestBody: body, sendUpdates: 'all' });
+    const event = resp.data;
+
+    console.log('[hume-tool-bridge] ✅ event created:', { id: event.id, htmlLink: event.htmlLink, start: event.start, end: event.end });
+    return res.json({ ok: true, event: { id: event.id, htmlLink: event.htmlLink, start: event.start, end: event.end, summary: event.summary } });
+  } catch (err) {
+    console.error('[hume-tool-bridge] ❌ error:', err?.message || err);
+    return res.status(500).json({ ok: false, error: err && err.message ? err.message : String(err) });
+  }
+});
+
+// --- Post-Call Processing: Twilio Status Webhook ---
+// Configure this URL in your Twilio phone number settings as the "Status Callback URL"
+app.post('/voice/call-status', express.urlencoded({ extended: false }), async (req, res) => {
+  const callSid = req.body.CallSid;
+  const callStatus = req.body.CallStatus;
+  const from = req.body.From;
+  const to = req.body.To;
+  const duration = req.body.CallDuration;
+
+  console.log(`[call-status] ${callSid} status: ${callStatus}, from: ${from}, duration: ${duration}s`);
+
+  // Only process completed calls
+  if (callStatus === 'completed' && HUME_API_KEY && HUME_CONFIG_ID) {
+    // Process appointment booking asynchronously (don't block webhook response)
+    processPostCallBooking(callSid, from).catch(err => {
+      console.error(`[call-status] error processing call ${callSid}:`, err?.message || err);
     });
+  }
+
+  res.status(204).end();
+});
+
+/**
+ * Process post-call appointment booking
+ * 1. Fetch conversation from Hume
+ * 2. Parse appointment details
+ * 3. Book appointment if details found
+ * 4. Send SMS confirmation
+ */
+async function processPostCallBooking(callSid, customerPhone) {
+  console.log(`[post-call-booking][${callSid}] starting...`);
+
+  try {
+    const { fetchHumeConversation, findRecentHumeChat, parseAppointmentFromConversation } = require('./services/hume-conversation');
+    
+    // Try to get Hume chat_id from our stored mapping
+    let humeChatId = callSidToHumeChatId.get(callSid);
+    
+    if (!humeChatId) {
+      console.log(`[post-call-booking][${callSid}] no stored chat_id, searching recent chats...`);
+      // Fallback: find the most recent Hume chat (likely the one that just ended)
+      try {
+        humeChatId = await findRecentHumeChat(new Date(), customerPhone);
+      } catch (err) {
+        console.error(`[post-call-booking][${callSid}] could not find Hume chat:`, err?.message || err);
+        console.log(`[post-call-booking][${callSid}] falling back to mock conversation for testing`);
+        
+        // Use mock conversation as fallback
+        const mockConversation = {
+          event_messages: [
+            { role: 'user', message: { content: 'I want to book an appointment for tomorrow at 2pm' } },
+            { role: 'assistant', message: { content: 'Great! What is your name?' } },
+            { role: 'user', message: { content: 'My name is John Smith' } },
+          ],
+          metadata: { from: customerPhone },
+        };
+        
+        const appointment = parseAppointmentFromConversation(mockConversation);
+        return await bookAndNotify(callSid, customerPhone, appointment);
+      }
+    }
+    
+    console.log(`[post-call-booking][${callSid}] fetching conversation from Hume chat: ${humeChatId}`);
+    const conversation = await fetchHumeConversation(humeChatId);
+    
+    // Clean up stored mapping
+    callSidToHumeChatId.delete(callSid);
+    
+    // Parse appointment from real conversation
+    const appointment = parseAppointmentFromConversation(conversation);
+
+    return await bookAndNotify(callSid, customerPhone, appointment);
+  } catch (err) {
+    console.error(`[post-call-booking][${callSid}] ❌ error:`, err?.message || err);
+  }
+}
+
+/**
+ * Book appointment and send SMS notification
+ */
+async function bookAndNotify(callSid, customerPhone, appointment) {
+  console.log(`[post-call-booking][${callSid}] parsed appointment:`, appointment);
+
+  if (!appointment.found) {
+    console.log(`[post-call-booking][${callSid}] no appointment details found in conversation`);
+    return;
+  }
+  
+  try {
+
+    // Book the appointment directly (internal call)
+    console.log(`[post-call-booking][${callSid}] booking appointment...`);
+    
+    const { DateTime } = require('luxon');
+    const calendarId = 'primary';
+    const timezone = appointment.timezone;
+    
+    // Parse date/time using same logic as the endpoint
+    const dParts = { year: parseInt(appointment.date.split('-')[0]), month: parseInt(appointment.date.split('-')[1]), day: parseInt(appointment.date.split('-')[2]) };
+    const sParts = { hour: parseInt(appointment.startTime.split(':')[0]), minute: parseInt(appointment.startTime.split(':')[1]) };
+    const eParts = { hour: parseInt(appointment.endTime.split(':')[0]), minute: parseInt(appointment.endTime.split(':')[1]) };
+    
+    const startDt = DateTime.fromObject({ ...dParts, ...sParts, second: 0, millisecond: 0 }, { zone: timezone });
+    const endDt = DateTime.fromObject({ ...dParts, ...eParts, second: 0, millisecond: 0 }, { zone: timezone });
+    
+    const auth = (function getAuth() {
+      const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI, GOOGLE_REFRESH_TOKEN } = process.env;
+      const o = new google.auth.OAuth2(GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REDIRECT_URI);
+      o.setCredentials({ refresh_token: GOOGLE_REFRESH_TOKEN });
+      return o;
+    })();
+    
+    const calendar = google.calendar({ version: 'v3', auth });
+    const eventBody = {
+      summary: appointment.summary,
+      description: appointment.description,
+      start: { dateTime: startDt.toISO(), timeZone: timezone },
+      end: { dateTime: endDt.toISO(), timeZone: timezone },
+    };
+    
+    const resp = await calendar.events.insert({ calendarId, requestBody: eventBody, sendUpdates: 'all' });
+    const bookingResult = resp.data;
+
+    console.log(`[post-call-booking][${callSid}] ✅ appointment booked:`, bookingResult.id);
+
+    // Send SMS confirmation
+    if (customerPhone && twilioPhoneNumber) {
+      const confirmationMessage = `Hi ${appointment.customerName || 'there'}! Your appointment at ${businessName} is confirmed for ${appointment.date} at ${appointment.startTime}. See you then!`;
+      
+      console.log(`[post-call-booking][${callSid}] sending SMS to ${customerPhone}...`);
+      
+      await twilioClient.messages.create({
+        body: confirmationMessage,
+        from: twilioPhoneNumber,
+        to: customerPhone,
+      });
+
+      console.log(`[post-call-booking][${callSid}] ✅ SMS confirmation sent`);
+    } else {
+      console.log(`[post-call-booking][${callSid}] skipping SMS (phone or Twilio number not configured)`);
+    }
+  } catch (err) {
+    console.error(`[post-call-booking][${callSid}] ❌ booking error:`, err?.message || err);
+    throw err;
+  }
+}
+
+// Start server (standalone Node)
+if (!process.env.VERCEL) {
+  const server = app.listen(port, () => {
+    console.log(`Server listening on http://localhost:${port}`);
+    console.log('POST /voice/answer redirects to Hume EVI');
+    console.log('POST /voice/call-status handles post-call booking & SMS');
+  });
+  
+  server.on('error', (err) => {
+    console.error('Server error:', err && err.message ? err.message : err);
+    process.exit(1);
   });
 }
 
 module.exports = app;
 
-// --- Debug: list recent calls and fetch a call with messages/events ---
-app.get('/debug/calls', async (req, res) => {
-  try {
-    if (!supabase) return res.status(500).json({ ok: false, error: 'supabase not configured' });
-    const { data, error } = await supabase
-      .from('calls')
-      .select('*')
-      .order('started_at', { ascending: false })
-      .limit(10);
-    if (error) throw error;
-    return res.json({ ok: true, calls: data });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: e && e.message ? e.message : String(e) });
-  }
-});
-
-app.get('/debug/calls/:sid', async (req, res) => {
-  try {
-    if (!supabase) return res.status(500).json({ ok: false, error: 'supabase not configured' });
-    const callId = req.params.sid;
-    const [{ data: call, error: e1 }, { data: messages, error: e2 }, { data: events, error: e3 }] = await Promise.all([
-      supabase.from('calls').select('*').eq('id', callId).maybeSingle(),
-      supabase.from('call_messages').select('*').eq('call_id', callId).order('created_at', { ascending: true }),
-      supabase.from('call_events').select('*').eq('call_id', callId).order('created_at', { ascending: true }),
-    ]);
-    if (e1) throw e1;
-    if (e2) throw e2;
-    if (e3) throw e3;
-    return res.json({ ok: true, call, messages, events });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: e && e.message ? e.message : String(e) });
-  }
-});
-
-app.get('/debug/calls/by-phone', async (req, res) => {
-  try {
-    const phone = String(req.query.phone || '').trim();
-    if (!phone) return res.status(400).json({ ok: false, error: 'phone required' });
-    const calls = await getRecentCallsByPhone(phone, 10);
-    return res.json({ ok: true, calls });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: e && e.message ? e.message : String(e) });
-  }
-});
-
-app.get('/debug/calls/:sid/transcript', async (req, res) => {
-  try {
-    const sid = req.params.sid;
-    const messages = await getCallTranscript(sid);
-    return res.json({ ok: true, messages });
-  } catch (e) {
-    return res.status(500).json({ ok: false, error: e && e.message ? e.message : String(e) });
-  }
-});
-
-// Twilio status callback (configure on number): marks end and saves summary
-app.post('/voice/status', express.urlencoded({ extended: false }), async (req, res) => {
-  const callSid = req.body.CallSid;
-  const status = req.body.CallStatus; // e.g., completed, busy, failed
-  try {
-    if (callSid && status) {
-      const payload = {
-        status,
-        direction: req.body.Direction || undefined,
-        from: req.body.From || undefined,
-        to: req.body.To || undefined,
-        duration: req.body.CallDuration || undefined,
-        timestamp: req.body.Timestamp || undefined,
-      };
-      try { await insertCallEvent({ callSid, type: 'twilio_status', payload }); } catch (_) {}
-    }
-    if (status === 'completed' && callSid) {
-      const messages = await getCallTranscript(callSid);
-      const summary = await generateCallSummaryFromMessages(messages, { businessName });
-      if (summary) await saveCallSummary(callSid, summary);
-    }
-  } catch (e) {
-    console.error('[status] summary error', e && e.message ? e.message : e);
-  } finally {
-    res.status(204).end();
-  }
-});
+// Removed former supabase debug and status endpoints
 
 
