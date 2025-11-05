@@ -14,7 +14,9 @@
   "author": "",
   "license": "ISC",
   "description": "",
-  "engines": { "node": "20.x" },
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@google-cloud/local-auth": "^3.0.1",
     "@openai/agents": "^0.2.1",
@@ -23,6 +25,7 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "googleapis": "^164.1.0",
+    "hume": "^0.15.2",
     "luxon": "^3.7.2",
     "openai": "^6.7.0",
     "pdf-parse": "^2.4.5",
